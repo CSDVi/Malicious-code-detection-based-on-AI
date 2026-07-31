@@ -2204,3 +2204,170 @@ pre,
     .evidence-head { align-items: flex-start; }
     .evidence-badges { justify-content: flex-start; }
 }
+
+/* Card navigation transitions: glass gradient feedback plus content enter/leave motion. */
+.page-transition-stage {
+    min-width: 0;
+    transform-origin: 50% 12%;
+    animation: page-stage-enter .46s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.page-transition-stage.is-leaving {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(10px) scale(.988);
+    animation: none;
+    pointer-events: none;
+    will-change: opacity, transform, filter;
+    transition:
+        opacity .2s ease,
+        filter .2s ease,
+        transform .22s cubic-bezier(.4, 0, 1, 1);
+}
+
+@keyframes page-stage-enter {
+    from {
+        opacity: 0;
+        filter: blur(6px);
+        transform: translateY(16px) scale(.988);
+    }
+    to {
+        opacity: 1;
+        filter: blur(0);
+        transform: translateY(0) scale(1);
+    }
+}
+
+.module-card,
+.dashboard-home .module-card {
+    isolation: isolate;
+    overflow: hidden;
+    transition:
+        color .22s ease,
+        transform .22s cubic-bezier(.22, 1, .36, 1);
+}
+
+.module-card::before,
+.dashboard-home .module-card::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 9px 5px 6px;
+    border: 1px solid rgba(244, 205, 121, .14);
+    border-radius: 14px;
+    background:
+        radial-gradient(circle at 24% 22%, rgba(255, 239, 187, .2), transparent 38%),
+        linear-gradient(115deg, rgba(116, 69, 16, .06), rgba(219, 166, 66, .22), rgba(90, 52, 11, .05));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 247, 218, .09),
+        0 8px 24px rgba(139, 89, 16, .12);
+    opacity: 0;
+    filter: blur(8px);
+    transform: skewX(-12deg) scaleX(.68);
+    pointer-events: none;
+    transition:
+        opacity .28s ease,
+        filter .32s ease,
+        transform .36s cubic-bezier(.22, 1, .36, 1);
+}
+
+.module-card:hover,
+.module-card:focus-visible,
+.module-card.is-switching,
+.dashboard-home .module-card:hover,
+.dashboard-home .module-card:focus-visible,
+.dashboard-home .module-card.is-switching {
+    transform: translateY(-2px);
+}
+
+.module-card:hover::before,
+.module-card:focus-visible::before,
+.module-card.is-switching::before,
+.dashboard-home .module-card:hover::before,
+.dashboard-home .module-card:focus-visible::before,
+.dashboard-home .module-card.is-switching::before {
+    opacity: 1;
+    filter: blur(0);
+    transform: skewX(0) scaleX(1);
+}
+
+.module-card.is-switching,
+.dashboard-home .module-card.is-switching {
+    transform: translateY(-1px) scale(.97);
+}
+
+.module-card span,
+.dashboard-home .module-card span {
+    position: relative;
+    z-index: 1;
+    transition: color .22s ease, text-shadow .22s ease;
+}
+
+.module-card:hover span,
+.module-card:focus-visible span,
+.module-card.is-switching span,
+.dashboard-home .module-card:hover span,
+.dashboard-home .module-card:focus-visible span,
+.dashboard-home .module-card.is-switching span {
+    color: #fff0c5;
+    text-shadow: 0 0 16px rgba(228, 180, 79, .22);
+}
+
+.content-tab {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 10px 10px 0 0;
+    transition:
+        color .2s ease,
+        transform .22s cubic-bezier(.22, 1, .36, 1);
+}
+
+.content-tab::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 4px 3px 3px;
+    border-radius: 8px 8px 2px 2px;
+    background: linear-gradient(115deg, rgba(99, 57, 10, .02), rgba(218, 167, 68, .2), rgba(99, 57, 10, .02));
+    opacity: 0;
+    transform: skewX(-12deg) scaleX(.68);
+    transition:
+        opacity .24s ease,
+        transform .32s cubic-bezier(.22, 1, .36, 1);
+}
+
+.content-tab:hover,
+.content-tab:focus-visible,
+.content-tab.is-switching {
+    transform: translateY(-2px);
+}
+
+.content-tab:hover::before,
+.content-tab:focus-visible::before,
+.content-tab.is-switching::before {
+    opacity: 1;
+    transform: skewX(0) scaleX(1);
+}
+
+.content-tab.is-switching {
+    transform: translateY(-1px) scale(.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-transition-stage {
+        animation: none;
+    }
+
+    .page-transition-stage.is-leaving {
+        opacity: 1;
+        filter: none;
+        transform: none;
+    }
+
+    .module-card::before,
+    .dashboard-home .module-card::before,
+    .content-tab::before {
+        display: none;
+    }
+}

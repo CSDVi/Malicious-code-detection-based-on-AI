@@ -1,6 +1,77 @@
 ﻿(function () {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+    function setupPageTransitions() {
+        const stage = document.querySelector("[data-page-transition-stage]");
+        if (!stage || reduceMotion) return;
+
+        let leaving = false;
+        const transitionLinks = document.querySelectorAll(
+            ".module-card, .content-tab, [data-page-transition]"
+        );
+
+        transitionLinks.forEach((link) => {
+            link.addEventListener("click", (event) => {
+                if (
+                    leaving
+                    || event.defaultPrevented
+                    || event.button !== 0
+                    || event.metaKey
+                    || event.ctrlKey
+                    || event.shiftKey
+                    || event.altKey
+                    || link.hasAttribute("download")
+                    || link.target
+                ) {
+                    return;
+                }
+
+                const destination = new URL(link.href, window.location.href);
+                const current = new URL(window.location.href);
+                const isSameDocumentHash = (
+                    destination.origin === current.origin
+                    && destination.pathname === current.pathname
+                    && destination.search === current.search
+                    && destination.hash
+                    && destination.hash !== current.hash
+                );
+                const isCurrentPage = (
+                    destination.origin === current.origin
+                    && destination.pathname === current.pathname
+                    && destination.search === current.search
+                    && destination.hash === current.hash
+                );
+
+                if (
+                    destination.origin !== current.origin
+                    || !["http:", "https:"].includes(destination.protocol)
+                    || isSameDocumentHash
+                    || isCurrentPage
+                ) {
+                    return;
+                }
+
+                event.preventDefault();
+                leaving = true;
+                link.classList.add("is-switching");
+                stage.classList.add("is-leaving");
+                stage.setAttribute("aria-busy", "true");
+                window.setTimeout(() => {
+                    window.location.assign(destination.href);
+                }, 220);
+            });
+        });
+
+        window.addEventListener("pageshow", () => {
+            leaving = false;
+            stage.classList.remove("is-leaving");
+            stage.removeAttribute("aria-busy");
+            transitionLinks.forEach((link) => link.classList.remove("is-switching"));
+        });
+    }
+
+    setupPageTransitions();
+
     function riskClass(level) {
         if (!level) return "risk-low";
         const normalized = level.toLowerCase();
@@ -357,7 +428,6 @@
 
     gsap.defaults({ duration: 0.58, ease: "power3.out" });
     const tl = gsap.timeline();
-    tl.from(".motion-page", { autoAlpha: 0, duration: 0.42 });
     const introCards = document.querySelectorAll(".motion-card:not(.top-nav), .metric-card, .panel, .command-panel, .table-panel");
     if (introCards.length) {
         tl.from(introCards, {

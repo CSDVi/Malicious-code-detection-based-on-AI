@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}獬豸安码{% endblock %}</title>
     <link href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}?v=1.11.3" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/style.css') }}?v=20260731-progress-modes" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}?v=20260731-card-transitions" rel="stylesheet">
 </head>
 <body class="{% block body_class %}{% endblock %}">
 <div class="app-shell">
@@ -38,10 +38,12 @@
             </section>
             {% endif %}
 
-            {% with messages = get_flashed_messages() %}
-            {% for msg in messages %}<div class="flash-error motion-card">{{ msg }}</div>{% endfor %}
-            {% endwith %}
-            {% block content %}{% endblock %}
+            <div class="page-transition-stage" data-page-transition-stage>
+                {% with messages = get_flashed_messages() %}
+                {% for msg in messages %}<div class="flash-error motion-card">{{ msg }}</div>{% endfor %}
+                {% endwith %}
+                {% block content %}{% endblock %}
+            </div>
         </div>
     </main>
 </div>
@@ -115,7 +117,7 @@ document.addEventListener("visibilitychange", function() {
     }
 });
 </script>
-<script src="{{ url_for('static', filename='js/app.js') }}?v=20260731-progress-modes"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v=20260731-card-transitions"></script>
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>
