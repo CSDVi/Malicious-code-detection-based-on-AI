@@ -37,6 +37,7 @@
                 <div class="section-title compact-title"><div><h2>2. 上传文件</h2><p>支持 {{ single_file_language_labels|join('、') }} 及 EXE/DLL/SYS/OCX，最大 20 MB。</p></div></div>
             <label class="upload-zone compact-upload">
                 <input type="file" name="code_file" accept="{{ single_file_accept }}" required>
+                <span class="upload-icon" aria-hidden="true"><i class="bi bi-file-earmark-code"></i></span>
                 <strong>拖入代码文件或点击选择，也可上传其他样本文件</strong>
                 <span class="metric-sub" data-file-label>尚未选择文件</span>
             </label>
@@ -67,6 +68,7 @@
         <div class="section-title compact-title"><div><h2>2. 上传项目</h2><p>当前仅支持 ZIP（.zip）压缩包，最大 1 GB。</p></div></div>
         <label class="upload-zone project-upload">
             <input type="file" name="project_zip" accept=".zip" data-max-bytes="1073741824" required>
+            <span class="upload-icon" aria-hidden="true"><i class="bi bi-file-earmark-zip"></i></span>
             <strong>拖入 ZIP 项目包或点击选择</strong>
             <span class="metric-sub" data-file-label>尚未选择文件</span>
         </label>
