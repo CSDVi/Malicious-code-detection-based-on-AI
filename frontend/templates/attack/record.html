@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}报告详情 - 獬豸安码{% endblock %}
+{% block content %}
+{% set malicious_model = record.engine_votes.get('malicious_model', {}) %}
+<section class="page-heading report-heading">
+    <div><span class="eyebrow">检测报告 #{{ record.id }}</span><h1>{{ record.filename }}</h1></div>
+    <div class="hero-actions"><a class="primary-action" href="{{ url_for('attack.record_report', record_id=record.id) }}">导出报告</a><a class="secondary-action" href="{{ url_for('attack.history') }}">返回历史</a></div>
+</section>
+
+<section class="result-conclusion risk-surface-{{ record.risk_level }}">
+    <div class="result-verdict"><span>检测结论</span><strong>{% if record.risk_level == 'safe' %}正常{% else %}{{ record.risk_level|zh }}{% endif %}</strong></div>
+    <div class="result-mode"><span>实际模式</span><strong>{{ record.effective_mode|zh }}</strong></div>
+    <div class="risk-score-orb risk-score-{{ record.risk_level }}"><span>风险分</span><strong>{{ record.risk_score }}</strong></div>
+</section>
+
+<section class="panel fingerprint-panel section-block">
+    <div class="section-title compact-title"><div><h2>文件指纹</h2></div></div>
+    <dl class="fingerprint-list">
+        <div><dt>MD5</dt><dd>{{ record.hashes.md5 or '未记录' }}</dd></div>
+        <div><dt>SHA-1</dt><dd>{{ record.hashes.sha1 or '未记录' }}</dd></div>
+        <div><dt>SHA-256</dt><dd>{{ record.hashes.sha256 or record.file_hash }}</dd></div>
+    </dl>
+</section>
+
+<section class="panel fingerprint-panel section-block">
+    <div class="section-title compact-title"><div><h2>辅助分析状态</h2></div></div>
+    <div class="capability-status-groups">
+        <div class="capability-status-group">
+            <h3>本次已执行</h3>
+            <div class="capability-status-list capability-status-executed">
+                {% for item in auxiliary_analysis.executed %}<span><strong>{{ item.name }}</strong><small>{{ item.detail }}</small></span>{% else %}<span><small>该历史记录没有保存已完成的辅助分析</small></span>{% endfor %}
+            </div>
+        </div>
+        {% if auxiliary_analysis.inactive %}
+        <div class="capability-status-group">
+            <h3>未启用能力</h3>
+            <div class="capability-status-list capability-status-inactive">
+                {% for item in auxiliary_analysis.inactive %}<span><strong>{{ item.name }}</strong><small>{{ item.detail }}</small></span>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="grid-2 section-block">
+    {% for title, probability, model in [('恶意代码检测', record.malicious_probability, malicious_model)] %}
+    <article class="metric-card model-result-card">
+        <div class="metric-label"><span>{{ title }}</span></div>
+        {% if model.get('available') and probability is not none %}<div class="probability-value">{{ (probability * 100)|round(1) }}%</div><div class="model-result-state">{{ model.get('status')|zh }}</div>
+        {% else %}<div class="unavailable-value">不可用</div>{% endif %}
+    </article>
+    {% endfor %}
+</section>
+
+{% set xai = record.ai_explainability %}
+<section class="panel motion-card section-block ai-explanation-panel">
+    <div class="section-title compact-title"><div><h2>AI判断与证据</h2></div></div>
+    <div class="ai-explanation-summary">
+        <div><span>CodeT5+ 220M语义判断</span>{% if xai.codet5p.available %}<strong>{{ (xai.codet5p.probability * 100)|round(1) }}%</strong><small>{{ xai.codet5p.decision|zh }} · 文件级判断</small>{% else %}<strong>未执行</strong>{% endif %}</div>
+        <div><span>XGBoost快速判断</span>{% if xai.xgboost.available %}<strong>{{ (xai.xgboost.probability * 100)|round(1) }}%</strong>{% else %}<strong>不可用</strong>{% endif %}</div>
+        <div><span>最终判定主导</span><strong>{% if xai.decision_authority in ('ai', 'ai_with_rule_vulnerability') %}AI主判{% elif xai.decision_authority == 'rule_fallback' %}规则回退{% else %}未决{% endif %}</strong><small>{% if xai.rule_fallback_used %}仅因AI不可用、不确定或冲突才启用规则{% else %}规则只解释风险行、原因与修复方式{% endif %}</small></div>
+    </div>
+</section>
+
+<section class="section-block">
+    <article class="panel motion-card advice-panel">
+        <div class="section-title compact-title"><div><h2>修复建议</h2></div></div>
+        <ol class="advice-list">{% for suggestion in record.repair_suggestions %}<li>{{ suggestion }}</li>{% else %}<li>本次记录没有可定位证据，请结合模型结论进行人工复核。</li>{% endfor %}</ol>
+        {% if record.remediation_references %}<div class="advice-sources"><span>建议依据</span>{% for reference in record.remediation_references %}<a href="{{ reference.url }}" target="_blank" rel="noopener noreferrer">{{ reference.title }}</a>{% endfor %}</div>{% endif %}
+    </article>
+</section>
+
+<section class="evidence-section section-block">
+    <div class="section-title compact-title"><div><h2>证据代码</h2></div><span class="evidence-count">{{ record.evidence_items|length }} 条</span></div>
+    <div class="evidence-list">
+        {% for match in record.evidence_items %}
+        <article class="evidence-item motion-card">
+            <header class="evidence-head">
+                <div><strong>第 {{ match.line or '未知' }} 行</strong><span>{{ match.risk_type|zh }}{% if match.rule_id %} · {{ match.rule_id }}{% endif %}{% if match.cwe %} · {{ match.cwe }}{% endif %}{% if match.owasp_category %} · {{ match.owasp_category }}{% endif %}{% if match.api_security_category %} · {{ match.api_security_category }}{% endif %}</span></div>
+                <div class="evidence-badges">
+                    <span class="basis-badge basis-{{ match.evidence_basis or 'rule_only' }}">{% if match.evidence_basis == 'ai_decision' %}AI主判{% elif match.evidence_basis == 'ai_and_rule' %}AI与规则一致{% elif match.evidence_basis == 'ai_only' %}AI重点关注{% else %}规则解释{% endif %}</span>
+                    {% if match.ai_attribution %}<span class="suspicion-badge">AI行贡献 {{ match.ai_attribution.contribution_percent }}%</span>{% else %}<span class="suspicion-badge">可疑度 {{ match.suspicion_score if match.suspicion_score is defined else '未记录' }}{% if match.suspicion_score is defined %}/100{% endif %}</span>{% endif %}
+                </div>
+            </header>
+            {% if match.code_context %}<pre class="evidence-code">{% for row in match.code_context %}<span class="{% if row.is_target %}target-line{% endif %}"><b>{{ row.line }}</b><code>{{ row.code }}</code></span>{% endfor %}</pre>{% elif match.snippet %}<pre class="evidence-code"><span class="target-line"><b>{{ match.line }}</b><code>{{ match.snippet }}</code></span></pre>{% endif %}
+            <div class="evidence-explanation-grid">
+                <div><strong>危害</strong><p>{{ match.harm or match.description }}</p>{% if match.risk_domains %}<small>风险范围：{{ match.risk_domains|join('、') }}</small>{% endif %}</div>
+                <div><strong>检测依据</strong><p>{{ match.basis_text or match.description }}</p>{% if match.ai_attribution %}<small>遮挡该行后，XGBoost恶意概率下降 {{ (match.ai_attribution.probability_drop * 100)|round(2) }} 个百分点。贡献度只解释模型判断，不是漏洞概率。</small>{% endif %}</div>
+                {% if match.repair_suggestions %}<div class="evidence-remediation"><strong>修复建议</strong><ol>{% for suggestion in match.repair_suggestions[:3] %}<li>{{ suggestion }}</li>{% endfor %}</ol></div>{% endif %}
+            </div>
+        </article>
+        {% else %}<div class="empty-state evidence-empty"><span>{% if record.final_decision == 'unknown' %}模型给出了风险提示，但未找到可定位代码证据，当前结论需人工复核{% else %}该记录没有可定位到具体代码行的风险证据{% endif %}</span></div>{% endfor %}
+    </div>
+</section>
+
+<details class="technical-details section-block">
+    <summary><span>检测组件技术详情</span></summary>
+        <div class="engine-run-list">
+            <div class="engine-run engine-run-header">
+                <strong class="engine-run-header-name" title="本次真正完成检测的规则或模型组件">引擎名称</strong>
+                <span title="当前仅展示执行完成的组件">执行状态</span>
+                <span title="模型认为文件具有恶意特征的概率，取值为 0～1">恶意概率（0～1）</span>
+                <span title="恶意概率达到该数值后，模型才判定为恶意">判定阈值（0～1）</span>
+                <span title="该组件完成检测所用的时间">耗时（毫秒）</span>
+                <small title="本次实际使用的模型版本；规则组件可能没有版本">模型版本</small>
+            </div>
+{% for engine in record.engines if engine.name in ('rule_engine', 'xgboost_malicious', 'codet5p', 'gatv2') and engine.status == 'completed' %}<div class="engine-run"><span class="status-dot status-{{ engine.status }}"></span><strong>{{ engine.name|zh }}</strong><span>{{ engine.status|zh }}</span><span>概率 {{ engine.probability if engine.probability is not none else '未产生' }}</span><span>阈值 {{ engine.threshold if engine.threshold is not none else '不适用' }}</span><span>{{ engine.duration_ms if engine.duration_ms is not none else '未记录' }} 毫秒</span><small>{{ engine.model_version or '' }}</small></div>{% else %}<div class="empty-state">该历史记录没有保存已完成的检测组件</div>{% endfor %}
+        </div>
+</details>
+{% endblock %}

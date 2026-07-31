@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}系统总览 - 獬豸安码{% endblock %}
+{% block body_class %}dashboard-home{% endblock %}
+{% block content %}
+<main class="landing-page">
+    <section class="hero-shell" aria-labelledby="hero-title">
+        <div class="hero-pattern" aria-hidden="true"></div>
+        <div class="hero-copy">
+            <h1 id="hero-title" class="hero-brand-title"><span class="hero-brand-xiezhi">獬豸</span><span class="hero-brand-anma">安码</span></h1>
+            <div class="hero-actions" aria-label="检测入口">
+                <a class="hero-action-card" href="{{ url_for('attack.index') }}">
+                    <span><strong>单文件检测</strong></span>
+                </a>
+                <a class="hero-action-card" href="{{ url_for('attack.project_scan') }}">
+                    <span><strong>项目检测</strong></span>
+                </a>
+            </div>
+
+        </div>
+
+        <div class="hero-visual" aria-label="可随指针扩散与凝聚的獬豸粒子云" data-particle-scene data-model-url="{{ url_for('static', filename='models/xiezhi.glb') }}" data-particle-data-url="{{ url_for('static', filename='models/xiezhi-particles-v1.bin') }}" data-model-revision="gold-interaction-v1">
+            <canvas id="xiezhi-particle-canvas"></canvas>
+            <div class="visual-vignette"></div>
+            <div class="particle-cursor-ripple" data-particle-ripple aria-hidden="true"></div>
+            <div class="visual-caption">
+                <span>獬豸·明鉴</span>
+                <small><strong data-particle-count>6,000</strong> 个真实表面粒子</small>
+            </div>
+            <div class="visual-loading" data-particle-loading>
+                <span class="loading-mark"></span>
+                <span>正在解析本地獬豸模型<small data-particle-progress>准备载入</small></span>
+            </div>
+            <div class="visual-error" data-particle-error hidden><span>模型未能加载，检测功能不受影响</span></div>
+            <div class="visual-orbit orbit-one"></div>
+            <div class="visual-orbit orbit-two"></div>
+        </div>
+
+        <div class="recent-stack">
+            <section class="recent-panel" aria-labelledby="recent-title">
+                <div class="recent-panel-head">
+                    <h2 id="recent-title">最近检测记录</h2>
+                    <a href="{{ url_for('attack.history') }}">查看全部</a>
+                </div>
+                <div class="recent-table">
+                    <div class="recent-row recent-row-head"><span>对象</span><span>风险</span><span>模式</span><span>时间</span></div>
+                    {% for item in recent_records[:4] %}
+                    <a class="recent-row" href="{% if item.record_type == 'project' %}{{ url_for('attack.project_scan', job_id=item.id) }}{% else %}{{ url_for('attack.record', record_id=item.id) }}{% endif %}">
+                        <span class="recent-file">
+                            <b class="recent-kind recent-kind-{{ item.record_type }}">{{ item.record_type_label }}</b>
+                            <strong>{{ item.target_name }}</strong>
+                        </span>
+                        <span><b class="recent-risk risk-{{ item.risk_level }}">{{ item.risk_level|zh }} / {{ item.risk_score }}</b></span>
+                        <span>{{ item.mode|zh }}</span>
+                        <span>{{ item.created_at[:16]|replace('T', ' ') }}</span>
+                    </a>
+                    {% else %}
+                    <div class="recent-empty"><span>完成第一次检测后，风险信号会出现在这里</span></div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="importmap">
+{
+    "imports": {
+        "three": "{{ url_for('static', filename='vendor/three/three.module.min.js') }}",
+        "three/addons/": "{{ url_for('static', filename='vendor/three/addons/') }}"
+    }
+}
+</script>
+<script type="module" src="{{ url_for('static', filename='js/xiezhi-particles.js') }}?v=20260731-precomputed-particles"></script>
+{% endblock %}

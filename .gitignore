@@ -1,0 +1,66 @@
+# Local secrets and machine-specific configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.key
+
+# Python, pytest, and editor caches
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs, profiles, and temporary files
+*.log
+*.pid
+*.prof
+*.tmp
+*.temp
+.codex_tmp/
+
+# Training corpora, test samples, and generated experiment artifacts
+/practicesets/
+/testsets/
+/artifacts/
+/backend/data/
+/backend/logs/
+/backend/practicesets/
+/backend/.pytest_tmp/
+/backend/.pytest-tmp-safe-extract/
+/backend/.test-work/
+/backend/.training-envs/
+/backend/pytest-cache-files-*/
+
+# Large, historical, or reproducible model artifacts
+/backend/models/candidates/
+/backend/models/codet5p_artifacts/
+/backend/models/archive/
+/backend/models/registry/
+/backend/models/xgb_registry/
+/backend/models/pretrained/
+/backend/models/*__*.pt
+
+# Original or unused font sources; the application loads WOFF2 subsets
+/frontend/static/fonts/candidates/
+/frontend/static/fonts/aa-yunshen/
+/frontend/static/fonts/ma-shan-zheng/
+/frontend/static/fonts/hanwang-injang/
+/frontend/static/fonts/**/*.ttf
+
+# The UI loads the compact precomputed particle binary first; GLB is fallback only
+/frontend/static/models/xiezhi.glb
+
+# Local audit reports and generated sharing archives
+/docs/项目清理审计_*/
+/scripts/audit_project_cleanup.py
+/XiezhiCodeGuard_*.zip

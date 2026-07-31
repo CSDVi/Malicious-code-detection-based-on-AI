@@ -1,0 +1,4 @@
+huggingface_hub>=0.34,<2
+transformers>=4.50,<6
+safetensors>=0.5,<1
+sentencepiece>=0.2,<1

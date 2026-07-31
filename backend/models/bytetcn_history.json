@@ -1,0 +1,182 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 2.016317690709103,
+    "validation": {
+      "malicious_intent": {
+        "accuracy": 0.9588607594936709,
+        "precision": 0.9224137931034483,
+        "recall": 0.7570754716981132,
+        "f1": 0.8316062176165804,
+        "false_positive_rate": 0.009868421052631578,
+        "false_negative_rate": 0.2429245283018868,
+        "brier_score": 0.041119934708429715,
+        "samples": 3160,
+        "temperature": 1.0,
+        "threshold": 0.62
+      },
+      "vulnerability_risk": {
+        "accuracy": 0.7945619335347432,
+        "precision": 0.5374149659863946,
+        "recall": 1.0,
+        "f1": 0.6991150442477877,
+        "false_positive_rate": 0.2698412698412698,
+        "false_negative_rate": 0.0,
+        "brier_score": 0.14902049748502721,
+        "samples": 662,
+        "temperature": 1.0,
+        "threshold": 0.51
+      }
+    }
+  },
+  {
+    "epoch": 2,
+    "train_loss": 1.5572624309248526,
+    "validation": {
+      "malicious_intent": {
+        "accuracy": 0.9610759493670886,
+        "precision": 0.8909090909090909,
+        "recall": 0.8089622641509434,
+        "f1": 0.8479604449938195,
+        "false_positive_rate": 0.015350877192982455,
+        "false_negative_rate": 0.19103773584905662,
+        "brier_score": 0.03281382952321209,
+        "samples": 3160,
+        "temperature": 1.0,
+        "threshold": 0.33
+      },
+      "vulnerability_risk": {
+        "accuracy": 0.7945619335347432,
+        "precision": 0.5374149659863946,
+        "recall": 1.0,
+        "f1": 0.6991150442477877,
+        "false_positive_rate": 0.2698412698412698,
+        "false_negative_rate": 0.0,
+        "brier_score": 0.14201138425438742,
+        "samples": 662,
+        "temperature": 1.0,
+        "threshold": 0.5
+      }
+    }
+  },
+  {
+    "epoch": 3,
+    "train_loss": 1.4404848042661451,
+    "validation": {
+      "malicious_intent": {
+        "accuracy": 0.9674050632911393,
+        "precision": 0.9598853868194842,
+        "recall": 0.7900943396226415,
+        "f1": 0.8667529107373867,
+        "false_positive_rate": 0.005116959064327485,
+        "false_negative_rate": 0.2099056603773585,
+        "brier_score": 0.03842300353611287,
+        "samples": 3160,
+        "temperature": 1.0,
+        "threshold": 0.89
+      },
+      "vulnerability_risk": {
+        "accuracy": 0.7945619335347432,
+        "precision": 0.5374149659863946,
+        "recall": 1.0,
+        "f1": 0.6991150442477877,
+        "false_positive_rate": 0.2698412698412698,
+        "false_negative_rate": 0.0,
+        "brier_score": 0.14432958238553623,
+        "samples": 662,
+        "temperature": 1.0,
+        "threshold": 0.5
+      }
+    }
+  },
+  {
+    "epoch": 4,
+    "train_loss": 1.3308486057452142,
+    "validation": {
+      "malicious_intent": {
+        "accuracy": 0.9623417721518988,
+        "precision": 0.8802992518703242,
+        "recall": 0.8325471698113207,
+        "f1": 0.8557575757575757,
+        "false_positive_rate": 0.017543859649122806,
+        "false_negative_rate": 0.16745283018867924,
+        "brier_score": 0.045218437636969824,
+        "samples": 3160,
+        "temperature": 1.0,
+        "threshold": 0.88
+      },
+      "vulnerability_risk": {
+        "accuracy": 0.7945619335347432,
+        "precision": 0.5374149659863946,
+        "recall": 1.0,
+        "f1": 0.6991150442477877,
+        "false_positive_rate": 0.2698412698412698,
+        "false_negative_rate": 0.0,
+        "brier_score": 0.13905880455124067,
+        "samples": 662,
+        "temperature": 1.0,
+        "threshold": 0.5
+      }
+    }
+  },
+  {
+    "epoch": 5,
+    "train_loss": 1.2360565215268955,
+    "validation": {
+      "malicious_intent": {
+        "accuracy": 0.9639240506329114,
+        "precision": 0.9329608938547486,
+        "recall": 0.7877358490566038,
+        "f1": 0.8542199488491049,
+        "false_positive_rate": 0.008771929824561403,
+        "false_negative_rate": 0.21226415094339623,
+        "brier_score": 0.03263271203007152,
+        "samples": 3160,
+        "temperature": 1.0,
+        "threshold": 0.77
+      },
+      "vulnerability_risk": {
+        "accuracy": 0.7945619335347432,
+        "precision": 0.5374149659863946,
+        "recall": 1.0,
+        "f1": 0.6991150442477877,
+        "false_positive_rate": 0.2698412698412698,
+        "false_negative_rate": 0.0,
+        "brier_score": 0.13512565808344462,
+        "samples": 662,
+        "temperature": 1.0,
+        "threshold": 0.5
+      }
+    }
+  },
+  {
+    "epoch": 6,
+    "train_loss": 1.2002071422681009,
+    "validation": {
+      "malicious_intent": {
+        "accuracy": 0.964240506329114,
+        "precision": 0.9237057220708447,
+        "recall": 0.7995283018867925,
+        "f1": 0.8571428571428571,
+        "false_positive_rate": 0.01023391812865497,
+        "false_negative_rate": 0.20047169811320756,
+        "brier_score": 0.03630118253414657,
+        "samples": 3160,
+        "temperature": 1.0,
+        "threshold": 0.9
+      },
+      "vulnerability_risk": {
+        "accuracy": 0.7945619335347432,
+        "precision": 0.5374149659863946,
+        "recall": 1.0,
+        "f1": 0.6991150442477877,
+        "false_positive_rate": 0.2698412698412698,
+        "false_negative_rate": 0.0,
+        "brier_score": 0.1345138448620352,
+        "samples": 662,
+        "temperature": 1.0,
+        "threshold": 0.5
+      }
+    }
+  }
+]

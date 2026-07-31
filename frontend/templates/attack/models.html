@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}模型中心 - 獬豸安码{% endblock %}
+{% macro metric(value) -%}
+    {{ '%.4f'|format(value) if value is not none else '未记录' }}
+{%- endmacro %}
+{% block content %}
+<section class="page-heading compact-page-heading">
+    <div><h1>模型中心</h1></div>
+</section>
+
+<section class="runtime-grid runtime-grid-wide model-runtime-grid" aria-label="模型运行状态">
+    {% for model in runtime_models %}
+    <article class="runtime-item motion-card">
+        <span class="status-dot status-{{ model.status }}"></span>
+        <strong>{{ model.name }}</strong>
+        <span class="status-label status-{{ model.status }}">{{ '可运行' if model.status == 'completed' else '不可用' }}</span>
+    </article>
+    {% endfor %}
+</section>
+
+<section class="table-panel motion-card section-block" id="performance">
+    <div class="section-title compact-title"><h2>当前模型性能</h2></div>
+    <div class="table-scroll">
+        <table class="data-table model-performance-table">
+            <thead><tr><th>模型</th><th>准确率</th><th>精确率</th><th>误报率</th><th>漏报率</th><th>F1 分数</th><th>发布情况</th></tr></thead>
+            <tbody>
+            {% for row in performance_rows %}
+            <tr class="model-performance-metrics">
+                <td><strong>{{ row.model }}</strong></td>
+                <td>{{ metric(row.accuracy) }}</td>
+                <td>{{ metric(row.precision) }}</td>
+                <td>{{ metric(row.false_positive_rate) }}</td>
+                <td>{{ metric(row.false_negative_rate) }}</td>
+                <td><strong>{{ metric(row.f1) }}</strong></td>
+                <td><span class="status-label status-{{ 'completed' if row.published else 'unavailable' }}">{{ '已发布' if row.published else '未发布' }}</span></td>
+            </tr>
+            <tr class="model-tradeoff-row">
+                <td colspan="7">
+                    <div class="model-tradeoff-grid">
+                        <div class="model-tradeoff-item model-advantage">
+                            <strong>优点</strong>
+                            <span>{{ row.advantage }}</span>
+                        </div>
+                        <div class="model-tradeoff-item model-limitation">
+                            <strong>缺点</strong>
+                            <span>{{ row.limitation }}</span>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7"><div class="empty-state">暂无可读取的模型指标。</div></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="table-panel motion-card section-block" id="versions">
+    <div class="section-title compact-title"><h2>模型版本</h2></div>
+    <div class="model-version-list">
+        {% for group in version_groups %}
+        <section class="model-version-block" data-model-version-group>
+            <div class="model-version-header">
+                <div>
+                    <h3>{{ group.name }}</h3>
+                    <code>{{ group.active_version_label or group.active_version }}</code>
+                </div>
+                <label class="version-select-field">
+                    <span>版本</span>
+                    <select data-model-version-select data-six-row-select aria-label="选择 {{ group.name }} 版本">
+                        {% for version in group.versions %}
+                        <option value="{{ version.version }}" {% if version.version == group.active_version %}selected{% endif %}>{{ version.display_label or version.version }}{% if version.version == group.active_version %}（当前）{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+
+            {% for version in group.versions %}
+            <div class="model-version-detail{% if version.version != group.active_version %} is-hidden{% endif %}" data-model-version-detail="{{ version.version }}">
+                {% set language_task = version.tasks|first %}
+                <div class="version-status-row">
+                    <span class="status-label status-{{ 'completed' if version.published else 'queued' }}">{{ '已发布' if version.published else '历史版本' }}</span>
+                    <div class="version-status-actions">
+                        {% if language_task and language_task.language_metrics %}
+                        <label class="version-language-field">
+                            <span>查看语言</span>
+                            <select data-version-language-select data-six-row-select aria-label="查看 {{ group.name }} {{ version.version }} 的语言指标">
+                                <option
+                                    value="summary"
+                                    data-language-label="{{ language_task.language_metrics | selectattr('full_metrics') | map(attribute='language_label') | join('、') }}"
+                                    data-metric-note=""
+                                    data-accuracy="{{ language_task.accuracy if language_task.accuracy is not none else '' }}"
+                                    data-precision="{{ language_task.precision if language_task.precision is not none else '' }}"
+                                    data-false-positive-rate="{{ language_task.false_positive_rate if language_task.false_positive_rate is not none else '' }}"
+                                    data-false-negative-rate="{{ language_task.false_negative_rate if language_task.false_negative_rate is not none else '' }}"
+                                    data-f1="{{ language_task.f1 if language_task.f1 is not none else '' }}"
+                                    selected
+                                >版本总体</option>
+                                {% for language in language_task.language_metrics %}
+                                {% if language.full_metrics %}
+                                <option
+                                    value="{{ language.language }}"
+                                    data-language-label="{{ language.language_label }}"
+                                    data-metric-note="{{ language.metric_note }}"
+                                    data-accuracy="{{ language.accuracy if language.accuracy is not none else '' }}"
+                                    data-precision="{{ language.precision if language.precision is not none else '' }}"
+                                    data-false-positive-rate="{{ language.false_positive_rate if language.false_positive_rate is not none else '' }}"
+                                    data-false-negative-rate="{{ language.false_negative_rate if language.false_negative_rate is not none else '' }}"
+                                    data-f1="{{ language.f1 if language.f1 is not none else '' }}"
+                                >{{ language.language_label }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </label>
+                        {% endif %}
+                        {% if current_user.role == 'admin' and group.activation_supported and not version.published %}
+                        <form method="post" action="{{ url_for('attack.activate_xgb_model' if group.key == 'xgboost' else 'attack.activate_model', version=version.version) }}" onsubmit="return confirm('{% if version.quality_gate_passed is sameas false %}该版本未通过质量门禁，{% endif %}确认发布版本 {{ version.version }}？')">
+                            <button class="secondary-action compact-button" type="submit">发布此版本</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="table-scroll">
+                    <table class="data-table version-metrics-table">
+                        <thead><tr><th>评测范围</th><th>准确率</th><th>精确率</th><th>误报率</th><th>漏报率</th><th>F1 分数</th></tr></thead>
+                        <tbody>
+                        {% for task in version.tasks %}
+                        <tr data-version-metric-row>
+                            <td data-version-language-scope>{{ language_task.language_metrics | selectattr('full_metrics') | map(attribute='language_label') | join('、') }}</td>
+                            <td data-version-metric="accuracy">{{ metric(task.accuracy) }}</td>
+                            <td data-version-metric="precision">{{ metric(task.precision) }}</td>
+                            <td data-version-metric="falsePositiveRate">{{ metric(task.false_positive_rate) }}</td>
+                            <td data-version-metric="falseNegativeRate">{{ metric(task.false_negative_rate) }}</td>
+                            <td data-version-metric="f1"><strong>{{ metric(task.f1) }}</strong></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6">该版本未记录可展示指标。</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="table-panel motion-card section-block" id="training-jobs">
+    <div class="section-title compact-title">
+        <div><h2>训练任务</h2></div>
+        <a class="secondary-action compact-button" href="{{ url_for('attack.models', _anchor='training-jobs') }}">刷新记录</a>
+    </div>
+    {% if current_user.role == 'admin' %}
+    <form class="training-launcher" method="post" enctype="multipart/form-data" action="{{ url_for('attack.train_models') }}" onsubmit="return confirm('模型训练会持续占用 CPU 和内存，确认提交该任务？')">
+        <label class="field training-model-field">
+            <span>1. 选择模型版本</span>
+            <select name="model_version" data-training-model-select required>
+                {% for model in training_models %}
+                <option value="{{ model.key }}">{{ model.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="field training-file-field">
+            <span data-training-file-step>2. 选择本地训练集文件</span>
+            <input type="file" name="training_file" accept=".jsonl,.csv" required>
+        </label>
+        <button class="primary-action primary-large" type="submit" {% if training_active %}title="新任务将进入等待队列"{% endif %}>
+            {{ '加入训练队列' if training_active else '提交训练' }}
+        </button>
+    </form>
+    {% else %}
+    <p class="training-permission-note">仅管理员可以发起模型训练，你仍可查看自己的训练记录。</p>
+    {% endif %}
+    <div class="table-scroll">
+        <table class="data-table training-history-table">
+            <thead><tr><th>作业 ID</th><th>训练模型</th><th>训练集</th><th>提交人</th><th>状态</th><th>生成的新版本</th><th>创建时间</th></tr></thead>
+            <tbody>
+            {% for job in training_jobs %}
+            <tr>
+                <td><code title="{{ job.id }}">{{ job.id[:12] }}</code></td>
+                <td><strong>{{ job.engine_name }}</strong><small class="cell-sub">来源版本：{{ job.base_version or '历史任务未记录' }}</small></td>
+                <td>{{ job.dataset_name or '历史任务未记录' }}</td>
+                <td>{{ job.username }}</td>
+                <td><span class="status-label status-{{ job.status }}">{{ job.status|zh }}</span></td>
+                <td>{% if job.model_version %}<code>{{ job.model_version }}</code>{% else %}—{% endif %}</td>
+                <td>{{ job.created_at[:16]|replace('T',' ') }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7"><div class="empty-state">暂无训练任务。</div></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="model-footnotes panel motion-card" aria-label="模型中心说明">
+    <h2>使用说明</h2>
+    <ol>
+        <li>选择模型和训练集，然后提交训练。</li>
+        <li>训练集支持 JSONL 或 CSV 文件，最大 512 MB。</li>
+        <li>训练完成后会生成新版本，不会覆盖原版本。</li>
+        <li>系统会从训练集的 language 字段或项目图的文件节点中自动识别语言。</li>
+    </ol>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll("[data-model-version-detail]").forEach(function(detail) {
+    const select = detail.querySelector("[data-version-language-select]");
+    if (!select) return;
+    const metricKeys = ["accuracy", "precision", "falsePositiveRate", "falseNegativeRate", "f1"];
+    const showLanguageMetrics = function() {
+        const option = select.options[select.selectedIndex];
+        metricKeys.forEach(function(key) {
+            const cell = detail.querySelector('[data-version-metric="' + key + '"]');
+            if (!cell) return;
+            const raw = option.dataset[key];
+            const value = raw === "" || Number.isNaN(Number(raw))
+                ? "未记录"
+                : Number(raw).toFixed(4);
+            if (key === "f1") {
+                cell.innerHTML = "<strong>" + value + "</strong>";
+            } else {
+                cell.textContent = value;
+            }
+        });
+        const scope = detail.querySelector("[data-version-language-scope]");
+        if (scope) {
+            scope.textContent = option.dataset.metricNote
+                ? option.dataset.languageLabel + " · " + option.dataset.metricNote
+                : option.dataset.languageLabel;
+        }
+    };
+    select.addEventListener("change", showLanguageMetrics);
+    showLanguageMetrics();
+});
+document.querySelectorAll("[data-model-version-group]").forEach(function(group) {
+    const select = group.querySelector("[data-model-version-select]");
+    if (!select) return;
+    const showVersion = function() {
+        group.querySelectorAll("[data-model-version-detail]").forEach(function(detail) {
+            detail.classList.toggle("is-hidden", detail.dataset.modelVersionDetail !== select.value);
+        });
+    };
+    select.addEventListener("change", showVersion);
+    showVersion();
+});
+document.querySelectorAll("[data-six-row-select]").forEach(function(select) {
+    const collapse = function() {
+        select.size = 1;
+        select.classList.remove("is-six-row-list");
+    };
+    const expand = function() {
+        if (select.options.length <= 1) return;
+        select.size = Math.min(6, select.options.length);
+        select.classList.add("is-six-row-list");
+    };
+    select.addEventListener("mousedown", function(event) {
+        if (select.size <= 1) {
+            event.preventDefault();
+            select.focus();
+            expand();
+        }
+    });
+    select.addEventListener("change", function() {
+        collapse();
+        select.blur();
+    });
+    select.addEventListener("blur", collapse);
+    select.addEventListener("keydown", function(event) {
+        if ((event.key === "Enter" || event.key === " ") && select.size <= 1) {
+            event.preventDefault();
+            expand();
+        } else if (event.key === "Escape") {
+            collapse();
+            select.blur();
+        }
+    });
+});
+{% if training_active %}
+window.setTimeout(function() { window.location.reload(); }, 5000);
+{% endif %}
+</script>
+{% endblock %}

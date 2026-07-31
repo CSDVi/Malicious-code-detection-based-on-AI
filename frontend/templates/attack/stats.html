@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}检测统计{% endblock %}
+{% block page_label %}检测统计{% endblock %}
+{% block content %}
+<section class="page-hero">
+    <div><span class="eyebrow">检测数据统计</span><h1>历史风险趋势</h1><p>按照风险等级、风险类别和代码语言汇总历史检测记录。</p></div>
+</section>
+<section class="grid-3">
+    <article class="panel motion-card"><h3>风险等级</h3><canvas id="levelChart"></canvas></article>
+    <article class="panel motion-card"><h3>风险类别</h3><canvas id="categoryChart"></canvas></article>
+    <article class="panel motion-card"><h3>语言分布</h3><canvas id="languageChart"></canvas></article>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+fetch("{{ url_for('attack.stats_api') }}").then(response => response.json()).then(data => {
+ const colors=["#d7a84f","#f0cd82","#8f6729","#b98b3d","#f6e4b8","#6b4a1b"];
+  const names={critical:"严重",high:"高危",medium:"中危",low:"低危",safe:"安全",python:"Python",javascript:"JavaScript/TypeScript",java:"Java",php:"PHP",bash:"Bash/Shell",powershell:"PowerShell",batch:"批处理/CMD",config:"config",json:"JSON",yaml:"YAML",toml:"TOML",ini:"INI",conf:"CONF",text:"TXT",unknown:"未知","SQL Injection":"SQL 注入",XSS:"跨站脚本",WebShell:"网页后门","Command Execution":"命令执行",SSRF:"服务端请求伪造","Path Traversal":"路径穿越","Unsafe Deserialization":"不安全反序列化","Secret Exposure":"敏感信息泄露","Download or Remote Load":"下载或远程加载","Download and Execute":"下载并执行","Obfuscated Payload":"混淆载荷","Install Hook Execution":"安装钩子执行","Credential Exfiltration":"凭据外传","Credential Collection":"凭据收集",Persistence:"持久化"};
+ const common={responsive:true,plugins:{legend:{labels:{color:"#d9cdb5"}}},scales:{x:{ticks:{color:"#a99b82"},grid:{color:"rgba(220,179,94,.08)"}},y:{ticks:{color:"#a99b82"},grid:{color:"rgba(220,179,94,.08)"}}}};
+ function draw(id,obj,type){new Chart(document.getElementById(id),{type,data:{labels:Object.keys(obj).map(key=>names[key]||key),datasets:[{data:Object.values(obj),backgroundColor:colors,borderColor:"rgba(241,211,145,.18)",borderWidth:1}]},options:type==="bar"?common:{responsive:true,plugins:{legend:{labels:{color:"#d9cdb5"}}}}})}
+ draw("levelChart",data.level_counts,"doughnut"); draw("categoryChart",data.category_counts,"bar"); draw("languageChart",data.language_counts,"pie");
+});
+</script>
+{% endblock %}

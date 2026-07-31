@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}历史记录 - 獬豸安码{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><h1>历史记录</h1></div>
+</section>
+
+<form class="filter-bar panel motion-card" method="get">
+    <label class="search-field"><i class="bi bi-search"></i><input type="search" name="q" value="{{ filters.q }}" placeholder="搜索文件名或哈希值"></label>
+    <label><span>风险</span><select name="risk"><option value="">全部</option>{% for value, label in [('critical','严重'),('high','高危'),('medium','中危'),('low','低危'),('safe','安全')] %}<option value="{{ value }}" {% if filters.risk == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label><span>模式</span><select name="mode"><option value="">全部</option>{% for value, label in [('quick','快速'),('standard','标准'),('deep','深度')] %}<option value="{{ value }}" {% if filters.mode == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label><span>开始日期</span><input type="date" name="date_from" value="{{ filters.date_from }}"></label>
+    <label><span>结束日期</span><input type="date" name="date_to" value="{{ filters.date_to }}"></label>
+    <button class="primary-action" type="submit">筛选</button>
+    <a class="secondary-action compact-button" href="{{ url_for('attack.history') }}">清除筛选</a>
+</form>
+
+{% if project_jobs %}
+<section class="table-panel motion-card section-block">
+    <div class="section-title compact-title"><div><h2>项目检测记录</h2></div></div>
+    <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>任务</th><th>项目</th><th>状态</th><th>结论</th><th>风险</th><th>时间</th><th></th></tr></thead>
+        <tbody>
+        {% for job in project_jobs %}
+        <tr><td><code>{{ job.id[:12] }}</code></td><td><strong>{{ job.target_name }}</strong><small class="cell-sub">{{ job.mode|zh }} · {{ job.total_files or 0 }} 个文件</small></td><td>{{ job.status|zh }}</td><td>{{ (job.final_decision or 'unknown')|zh }}</td><td>{% if job.risk_score is not none %}<span class="risk-badge" data-risk-level="{{ job.risk_level }}">{{ job.risk_level|zh }} / {{ job.risk_score }}</span>{% else %}暂无{% endif %}</td><td>{{ (job.created_at|string)[:16]|replace('T', ' ') }}</td><td>{% if job.status == 'completed' %}<a class="secondary-action compact-button" href="{{ url_for('attack.project_scan', job_id=job.id) }}">查看</a>{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+{% endif %}
+
+<form id="compare-form" method="get" action="{{ url_for('attack.compare_records') }}">
+    <input type="hidden" name="left" id="compare-left">
+    <input type="hidden" name="right" id="compare-right">
+    <section class="table-panel motion-card section-block">
+        <div class="section-title compact-title">
+            <div><h2>单文件检测记录</h2><p>当前筛选结果 {{ records|length }} 条</p></div>
+            <button class="secondary-action" id="compare-button" type="submit" disabled><span>对比所选记录</span></button>
+        </div>
+        <div class="table-scroll"><table class="data-table selectable-table">
+            <thead><tr><th class="select-column"></th><th>记录</th><th>文件</th><th>结论</th><th>风险</th><th>模式</th><th>类别</th><th>时间</th><th></th></tr></thead>
+            <tbody>
+            {% for item in records %}
+            <tr>
+                <td><input class="record-checkbox" type="checkbox" value="{{ item.id }}" aria-label="选择记录 {{ item.id }}"></td>
+                <td>#{{ item.id }}</td>
+                <td><strong>{{ item.filename }}</strong><small class="cell-sub">{{ item.display_language|zh }} · {{ item.file_hash[:10] }}...</small></td>
+                <td>{{ item.final_decision|zh }}</td>
+                <td><span class="risk-badge" data-risk-level="{{ item.risk_level }}">{{ item.risk_level|zh }} / {{ item.risk_score }}</span></td>
+                <td>{{ (item.effective_mode or '未记录')|zh }}</td>
+                <td>{% for category in item.categories[:2] %}<span class="data-tag compact-tag">{{ category|zh }}</span>{% else %}暂无{% endfor %}</td>
+                <td>{{ item.created_at[:16]|replace('T', ' ') }}</td>
+                <td><a class="secondary-action compact-button" href="{{ url_for('attack.record', record_id=item.id) }}">查看</a></td>
+            </tr>
+            {% else %}<tr><td colspan="9"><div class="empty-state">没有符合筛选条件的单文件检测记录</div></td></tr>{% endfor %}
+            </tbody>
+        </table></div>
+    </section>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function(){
+    const boxes = Array.from(document.querySelectorAll(".record-checkbox"));
+    const button = document.getElementById("compare-button");
+    const left = document.getElementById("compare-left");
+    const right = document.getElementById("compare-right");
+    function syncSelection(changed) {
+        let selected = boxes.filter(function(box){ return box.checked; });
+        if (selected.length > 2 && changed) changed.checked = false;
+        selected = boxes.filter(function(box){ return box.checked; });
+        button.disabled = selected.length !== 2;
+        button.querySelector("span").textContent = selected.length ? "已选择 " + selected.length + " / 2" : "对比所选记录";
+        left.value = selected[0] ? selected[0].value : "";
+        right.value = selected[1] ? selected[1].value : "";
+    }
+    boxes.forEach(function(box){ box.addEventListener("change", function(){ syncSelection(box); }); });
+})();
+</script>
+{% endblock %}

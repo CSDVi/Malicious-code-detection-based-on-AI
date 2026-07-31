@@ -1,0 +1,4852 @@
+{
+  "schema_version": 5,
+  "model_version": "xgb-malicious-routed-20260727T234637Z-6a248b9fe4",
+  "created_at": "2026-07-27T23:46:37+00:00",
+  "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\processed\\xgb_multilingual_malicious_20260728_v66.jsonl",
+  "dataset_sha256": "6a248b9fe41934dfc12479e60bf69d54ce817d5bde0557ae7565a76dc8f22e4a",
+  "feature_schema": [
+    "byte_length",
+    "character_length",
+    "line_count",
+    "average_line_length",
+    "max_line_length",
+    "blank_line_ratio",
+    "string_entropy",
+    "maximum_string_entropy",
+    "long_string_count",
+    "dangerous_api_count",
+    "dynamic_exec_count",
+    "process_execution_count",
+    "network_api_count",
+    "url_count",
+    "ip_count",
+    "base64_indicator_count",
+    "hex_escape_count",
+    "encoded_blob_count",
+    "install_hook_count",
+    "sensitive_file_count",
+    "environment_access_count",
+    "file_write_count",
+    "crypto_hash_count",
+    "control_flow_count",
+    "function_definition_count",
+    "import_count",
+    "dependency_marker_count",
+    "minified_line_ratio",
+    "comment_ratio_proxy",
+    "python_ast_node_count",
+    "python_ast_call_count",
+    "python_ast_branch_count",
+    "python_ast_parse_failed",
+    "source_input_count",
+    "sql_sink_count",
+    "command_sink_count",
+    "file_sink_count",
+    "network_sink_count",
+    "decode_operation_count",
+    "sanitizer_count",
+    "install_hook_signal_count",
+    "behavior_chain_count",
+    "string_concatenation_count",
+    "long_identifier_count",
+    "numeric_escape_count",
+    "source_to_sink_proxy",
+    "network_write_execute_proxy",
+    "decode_execute_proxy",
+    "risk_density",
+    "dangerous_api_density",
+    "url_density",
+    "comment_density",
+    "minified_byte_density",
+    "rule_match_count",
+    "rule_malicious_count",
+    "rule_vulnerable_count",
+    "rule_suspicious_count",
+    "rule_severity_sum",
+    "rule_max_severity",
+    "rule_sql_001",
+    "rule_sql_002",
+    "rule_xss_001",
+    "rule_xss_002",
+    "rule_ws_001",
+    "rule_ws_002",
+    "rule_cmd_001",
+    "rule_cmd_002",
+    "rule_ssrf_001",
+    "rule_ssrf_002",
+    "rule_path_001",
+    "rule_deser_001",
+    "rule_secret_001",
+    "rule_dl_001",
+    "rule_dl_002",
+    "rule_obf_001",
+    "rule_supply_001",
+    "rule_exfil_001",
+    "rule_exfil_002",
+    "rule_persist_001",
+    "rule_path_002",
+    "language_python",
+    "language_javascript",
+    "language_typescript",
+    "language_java",
+    "language_kotlin",
+    "language_php",
+    "language_bash",
+    "language_config",
+    "language_go",
+    "language_c",
+    "language_cpp",
+    "language_csharp",
+    "language_ruby",
+    "language_rust",
+    "language_scala",
+    "language_lua",
+    "language_perl",
+    "language_html",
+    "language_sql",
+    "language_unknown"
+  ],
+  "feature_mode": "universal_language_routes_with_validated_malicious_hybrid_routes",
+  "samples_total": 36208,
+  "samples_training_eligible": 36208,
+  "excluded_review_samples": 0,
+  "label_counts": {
+    "benign": 39641,
+    "vulnerable": 7141,
+    "malicious": 7627
+  },
+  "review_status_counts": {
+    "source_verified": 42581,
+    "behavior_verified": 979,
+    "differentially_verified": 10849
+  },
+  "tasks": {
+    "malicious_intent": {
+      "samples": 7939,
+      "accuracy": 0.9445,
+      "precision": 0.8139,
+      "recall": 0.9221,
+      "f1": 0.8646,
+      "pr_auc": 0.9543,
+      "false_positive_rate": 0.0502,
+      "false_negative_rate": 0.0779,
+      "quality_gate_passed": true,
+      "confusion_matrix": [
+        [
+          6090,
+          322
+        ],
+        [
+          119,
+          1408
+        ]
+      ],
+      "ready": true,
+      "task": "malicious_intent",
+      "engine": "xgboost+sigmoid_calibration",
+      "calibrated": true,
+      "calibration_split": "validation",
+      "labels": [
+        "benign",
+        "malicious"
+      ],
+      "positive_label": "malicious",
+      "negative_label": "benign",
+      "artifact": "xgb_malicious_classifier.joblib",
+      "train_samples": 23532,
+      "validation_samples": 6018,
+      "test_samples": 7939,
+      "deployment_test_samples": 7180,
+      "unsupported_test_samples": 759,
+      "train_positive_samples": 4324,
+      "train_unique_positive_families": 1879,
+      "supported_languages": [
+        "bash",
+        "batch",
+        "c",
+        "config",
+        "cpp",
+        "csharp",
+        "go",
+        "html",
+        "java",
+        "javascript",
+        "kotlin",
+        "lua",
+        "perl",
+        "php",
+        "powershell",
+        "python",
+        "ruby",
+        "rust",
+        "scala",
+        "sql",
+        "typescript",
+        "unknown"
+      ],
+      "language_coverage": {
+        "bash": {
+          "train": {
+            "benign": 86,
+            "malicious": 0,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 19,
+            "malicious": 0,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 35,
+            "malicious": 0,
+            "minimum_per_class": 10
+          },
+          "eligible": false
+        },
+        "config": {
+          "train": {
+            "benign": 808,
+            "malicious": 0,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 250,
+            "malicious": 0,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 218,
+            "malicious": 0,
+            "minimum_per_class": 10
+          },
+          "eligible": false
+        },
+        "go": {
+          "train": {
+            "benign": 2492,
+            "malicious": 0,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 498,
+            "malicious": 0,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 499,
+            "malicious": 0,
+            "minimum_per_class": 10
+          },
+          "eligible": false
+        },
+        "java": {
+          "train": {
+            "benign": 3122,
+            "malicious": 504,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 634,
+            "malicious": 186,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 719,
+            "malicious": 147,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "javascript": {
+          "train": {
+            "benign": 2657,
+            "malicious": 1943,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 615,
+            "malicious": 476,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 641,
+            "malicious": 761,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "php": {
+          "train": {
+            "benign": 4593,
+            "malicious": 1115,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 1002,
+            "malicious": 905,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 2112,
+            "malicious": 346,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "python": {
+          "train": {
+            "benign": 8836,
+            "malicious": 762,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 1991,
+            "malicious": 209,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 2181,
+            "malicious": 273,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "typescript": {
+          "train": {
+            "benign": 0,
+            "malicious": 0,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 0,
+            "malicious": 0,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 7,
+            "malicious": 0,
+            "minimum_per_class": 10
+          },
+          "eligible": false
+        }
+      },
+      "deployment": {
+        "samples": 5860,
+        "accuracy": 0.9797,
+        "precision": 0.9597,
+        "recall": 0.9629,
+        "f1": 0.9613,
+        "pr_auc": 0.9934,
+        "false_positive_rate": 0.0143,
+        "false_negative_rate": 0.0371,
+        "quality_gate_passed": true,
+        "confusion_matrix": [
+          [
+            4263,
+            62
+          ],
+          [
+            57,
+            1478
+          ]
+        ]
+      },
+      "thresholds": {
+        "decision": 0.165,
+        "uncertain_low": 0.065,
+        "uncertain_high": 0.215,
+        "validation_fpr": 0.0177,
+        "validation_precision": 0.9575,
+        "validation_fnr": 0.049,
+        "validation_recall": 0.951,
+        "validation_f1": 0.9542,
+        "target_fpr": 0.05,
+        "target_precision": 0.93,
+        "target_fnr": 0.05,
+        "quality_gate_passed": true
+      },
+      "validation": {
+        "samples": 6018,
+        "accuracy": 0.9731,
+        "precision": 0.9575,
+        "recall": 0.951,
+        "f1": 0.9542,
+        "pr_auc": 0.9873,
+        "false_positive_rate": 0.0177,
+        "false_negative_rate": 0.049,
+        "quality_gate_passed": true,
+        "confusion_matrix": [
+          [
+            4167,
+            75
+          ],
+          [
+            87,
+            1689
+          ]
+        ]
+      },
+      "by_language": {
+        "bash": {
+          "samples": 35,
+          "positive_samples": 0,
+          "negative_samples": 35,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.1714
+        },
+        "config": {
+          "samples": 218,
+          "positive_samples": 0,
+          "negative_samples": 218,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.0596
+        },
+        "go": {
+          "samples": 499,
+          "positive_samples": 0,
+          "negative_samples": 499,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.0381
+        },
+        "java": {
+          "samples": 866,
+          "accuracy": 0.9873,
+          "precision": 0.9658,
+          "recall": 0.9592,
+          "f1": 0.9625,
+          "pr_auc": 0.9967,
+          "false_positive_rate": 0.007,
+          "false_negative_rate": 0.0408,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              714,
+              5
+            ],
+            [
+              6,
+              141
+            ]
+          ]
+        },
+        "javascript": {
+          "samples": 1402,
+          "accuracy": 0.9907,
+          "precision": 0.9832,
+          "recall": 1.0,
+          "f1": 0.9915,
+          "pr_auc": 0.9999,
+          "false_positive_rate": 0.0203,
+          "false_negative_rate": 0.0,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              628,
+              13
+            ],
+            [
+              0,
+              761
+            ]
+          ]
+        },
+        "php": {
+          "samples": 2458,
+          "accuracy": 0.8946,
+          "precision": 0.5778,
+          "recall": 0.9335,
+          "f1": 0.7138,
+          "pr_auc": 0.9413,
+          "false_positive_rate": 0.1117,
+          "false_negative_rate": 0.0665,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              1876,
+              236
+            ],
+            [
+              23,
+              323
+            ]
+          ]
+        },
+        "python": {
+          "samples": 2454,
+          "accuracy": 0.9511,
+          "precision": 0.8592,
+          "recall": 0.6703,
+          "f1": 0.7531,
+          "pr_auc": 0.7823,
+          "false_positive_rate": 0.0138,
+          "false_negative_rate": 0.3297,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              2151,
+              30
+            ],
+            [
+              90,
+              183
+            ]
+          ]
+        },
+        "typescript": {
+          "samples": 7,
+          "positive_samples": 0,
+          "negative_samples": 7,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.0
+        }
+      },
+      "by_source": {
+        "android_malware_source": {
+          "samples": 147,
+          "positive_samples": 147,
+          "negative_samples": 0,
+          "insufficient_for_full_metrics": true,
+          "recall": 0.9592
+        },
+        "codesearchnet": {
+          "samples": 1993,
+          "positive_samples": 0,
+          "negative_samples": 1993,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.0151
+        },
+        "javascript_malware_collection": {
+          "samples": 761,
+          "positive_samples": 761,
+          "negative_samples": 0,
+          "insufficient_for_full_metrics": true,
+          "recall": 1.0
+        },
+        "nist_sard_php_sqli": {
+          "samples": 950,
+          "positive_samples": 0,
+          "negative_samples": 950,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.1958
+        },
+        "npm_official_registry": {
+          "samples": 127,
+          "positive_samples": 0,
+          "negative_samples": 127,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.0394
+        },
+        "owasp_benchmark_java": {
+          "samples": 220,
+          "positive_samples": 0,
+          "negative_samples": 220,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.0
+        },
+        "php_webshell_collection": {
+          "samples": 1012,
+          "accuracy": 0.9308,
+          "precision": 0.873,
+          "recall": 0.9335,
+          "f1": 0.9022,
+          "pr_auc": 0.9758,
+          "false_positive_rate": 0.0706,
+          "false_negative_rate": 0.0665,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              619,
+              47
+            ],
+            [
+              23,
+              323
+            ]
+          ]
+        },
+        "pypi_malregistry_ase2023": {
+          "samples": 273,
+          "positive_samples": 273,
+          "negative_samples": 0,
+          "insufficient_for_full_metrics": true,
+          "recall": 0.6703
+        },
+        "pypi_official_registry": {
+          "samples": 91,
+          "positive_samples": 0,
+          "negative_samples": 91,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.011
+        },
+        "pypi_popular_official": {
+          "samples": 2365,
+          "positive_samples": 0,
+          "negative_samples": 2365,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.0224
+        }
+      },
+      "feature_importance": [
+        {
+          "feature": "minified_byte_density",
+          "importance": 0.168135
+        },
+        {
+          "feature": "max_line_length",
+          "importance": 0.132781
+        },
+        {
+          "feature": "minified_line_ratio",
+          "importance": 0.117376
+        },
+        {
+          "feature": "language_java",
+          "importance": 0.032746
+        },
+        {
+          "feature": "string_entropy",
+          "importance": 0.030754
+        },
+        {
+          "feature": "network_write_execute_proxy",
+          "importance": 0.028174
+        },
+        {
+          "feature": "import_count",
+          "importance": 0.028159
+        },
+        {
+          "feature": "dangerous_api_count",
+          "importance": 0.025035
+        },
+        {
+          "feature": "language_python",
+          "importance": 0.023862
+        },
+        {
+          "feature": "string_concatenation_count",
+          "importance": 0.023827
+        },
+        {
+          "feature": "encoded_blob_count",
+          "importance": 0.023177
+        },
+        {
+          "feature": "risk_density",
+          "importance": 0.022785
+        },
+        {
+          "feature": "network_api_count",
+          "importance": 0.020155
+        },
+        {
+          "feature": "command_sink_count",
+          "importance": 0.019437
+        },
+        {
+          "feature": "dynamic_exec_count",
+          "importance": 0.018422
+        },
+        {
+          "feature": "function_definition_count",
+          "importance": 0.017477
+        },
+        {
+          "feature": "hex_escape_count",
+          "importance": 0.017081
+        },
+        {
+          "feature": "character_length",
+          "importance": 0.016764
+        },
+        {
+          "feature": "language_php",
+          "importance": 0.015387
+        },
+        {
+          "feature": "url_count",
+          "importance": 0.012676
+        }
+      ],
+      "limitations": [
+        "Synthetic evasion variants inherit the original sample split.",
+        "Metrics must be interpreted with the reported unique positive family count.",
+        "A language is unavailable unless both task classes meet the minimum in every split."
+      ],
+      "language_routes": {
+        "java": {
+          "artifact": "xgb_malicious_java.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.9469198342561722,
+            "uncertain_low": 0.84691983,
+            "uncertain_high": 0.95,
+            "validation_fpr": 0.0,
+            "validation_precision": 1.0,
+            "validation_fnr": 0.0054,
+            "validation_recall": 0.9946,
+            "validation_f1": 0.9973,
+            "target_fpr": 0.1,
+            "target_precision": 0.9,
+            "target_fnr": 0.1,
+            "plateau_position": 0.95,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 447,
+            "accuracy": 0.9866,
+            "precision": 0.993,
+            "recall": 0.966,
+            "f1": 0.9793,
+            "pr_auc": 0.9996,
+            "false_positive_rate": 0.0033,
+            "false_negative_rate": 0.034,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                299,
+                1
+              ],
+              [
+                5,
+                142
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 486,
+            "accuracy": 0.9979,
+            "precision": 1.0,
+            "recall": 0.9946,
+            "f1": 0.9973,
+            "pr_auc": 0.9999,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0054,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                300,
+                0
+              ],
+              [
+                1,
+                185
+              ]
+            ]
+          },
+          "test": {
+            "samples": 447,
+            "accuracy": 0.9866,
+            "precision": 0.993,
+            "recall": 0.966,
+            "f1": 0.9793,
+            "pr_auc": 0.9996,
+            "false_positive_rate": 0.0033,
+            "false_negative_rate": 0.034,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                299,
+                1
+              ],
+              [
+                5,
+                142
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v66_jvm_web_chain_routes\\java.jsonl",
+          "split_counts": {
+            "train": 1648,
+            "validation": 486,
+            "test": 447
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 1048,
+              "malicious": 600
+            },
+            "validation": {
+              "benign": 300,
+              "malicious": 186
+            },
+            "test": {
+              "benign": 300,
+              "malicious": 147
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.1,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.95,
+            "excluded_structured_features": [
+              "file_local_behavior_group_count",
+              "file_local_multi_behavior_group_proxy"
+            ],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "javascript": {
+          "artifact": "xgb_malicious_javascript.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.8534930944442749,
+            "uncertain_low": 0.75349309,
+            "uncertain_high": 0.90349309,
+            "validation_fpr": 0.03,
+            "validation_precision": 0.98,
+            "validation_fnr": 0.0308,
+            "validation_recall": 0.9692,
+            "validation_f1": 0.9745,
+            "target_fpr": 0.1,
+            "target_precision": 0.9,
+            "target_fnr": 0.1,
+            "plateau_position": 0.95,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 695,
+            "accuracy": 0.9669,
+            "precision": 0.9604,
+            "recall": 0.9823,
+            "f1": 0.9712,
+            "pr_auc": 0.9973,
+            "false_positive_rate": 0.0533,
+            "false_negative_rate": 0.0177,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                284,
+                16
+              ],
+              [
+                7,
+                388
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 754,
+            "accuracy": 0.9695,
+            "precision": 0.98,
+            "recall": 0.9692,
+            "f1": 0.9745,
+            "pr_auc": 0.9957,
+            "false_positive_rate": 0.03,
+            "false_negative_rate": 0.0308,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                291,
+                9
+              ],
+              [
+                14,
+                440
+              ]
+            ]
+          },
+          "test": {
+            "samples": 695,
+            "accuracy": 0.9669,
+            "precision": 0.9604,
+            "recall": 0.9823,
+            "f1": 0.9712,
+            "pr_auc": 0.9973,
+            "false_positive_rate": 0.0533,
+            "false_negative_rate": 0.0177,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                284,
+                16
+              ],
+              [
+                7,
+                388
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v66_jvm_web_chain_routes\\javascript.jsonl",
+          "split_counts": {
+            "train": 2785,
+            "validation": 754,
+            "test": 695
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 1048,
+              "malicious": 1737
+            },
+            "validation": {
+              "benign": 300,
+              "malicious": 454
+            },
+            "test": {
+              "benign": 300,
+              "malicious": 395
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.1,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.95,
+            "excluded_structured_features": [
+              "file_local_behavior_group_count",
+              "file_local_multi_behavior_group_proxy"
+            ],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "php": {
+          "artifact": "xgb_malicious_php.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.6388589890003205,
+            "uncertain_low": 0.53885899,
+            "uncertain_high": 0.68885899,
+            "validation_fpr": 0.03,
+            "validation_precision": 0.9705,
+            "validation_fnr": 0.0133,
+            "validation_recall": 0.9867,
+            "validation_f1": 0.9785,
+            "target_fpr": 0.1,
+            "target_precision": 0.9,
+            "target_fnr": 0.1,
+            "plateau_position": 0.95,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 600,
+            "accuracy": 0.9633,
+            "precision": 0.9633,
+            "recall": 0.9633,
+            "f1": 0.9633,
+            "pr_auc": 0.9927,
+            "false_positive_rate": 0.0367,
+            "false_negative_rate": 0.0367,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                289,
+                11
+              ],
+              [
+                11,
+                289
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 600,
+            "accuracy": 0.9783,
+            "precision": 0.9705,
+            "recall": 0.9867,
+            "f1": 0.9785,
+            "pr_auc": 0.997,
+            "false_positive_rate": 0.03,
+            "false_negative_rate": 0.0133,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                291,
+                9
+              ],
+              [
+                4,
+                296
+              ]
+            ]
+          },
+          "test": {
+            "samples": 600,
+            "accuracy": 0.9633,
+            "precision": 0.9633,
+            "recall": 0.9633,
+            "f1": 0.9633,
+            "pr_auc": 0.9927,
+            "false_positive_rate": 0.0367,
+            "false_negative_rate": 0.0367,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                289,
+                11
+              ],
+              [
+                11,
+                289
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v66_jvm_web_chain_routes\\php.jsonl",
+          "split_counts": {
+            "train": 2144,
+            "validation": 600,
+            "test": 600
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 1048,
+              "malicious": 1096
+            },
+            "validation": {
+              "benign": 300,
+              "malicious": 300
+            },
+            "test": {
+              "benign": 300,
+              "malicious": 300
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.1,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.95,
+            "excluded_structured_features": [
+              "file_local_behavior_group_count",
+              "file_local_multi_behavior_group_proxy"
+            ],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "python": {
+          "artifact": "xgb_malicious_python.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.7620339763164521,
+            "uncertain_low": 0.66203398,
+            "uncertain_high": 0.81203398,
+            "validation_fpr": 0.0,
+            "validation_precision": 1.0,
+            "validation_fnr": 0.0,
+            "validation_recall": 1.0,
+            "validation_f1": 1.0,
+            "target_fpr": 0.1,
+            "target_precision": 0.9,
+            "target_fnr": 0.1,
+            "plateau_position": 0.5,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 366,
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "pr_auc": 1.0,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                300,
+                0
+              ],
+              [
+                0,
+                66
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 347,
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "pr_auc": 1.0,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                300,
+                0
+              ],
+              [
+                0,
+                47
+              ]
+            ]
+          },
+          "test": {
+            "samples": 366,
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "pr_auc": 1.0,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                300,
+                0
+              ],
+              [
+                0,
+                66
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v50_all_language_routes\\python.jsonl",
+          "split_counts": {
+            "train": 1222,
+            "validation": 347,
+            "test": 366
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 1000,
+              "malicious": 222
+            },
+            "validation": {
+              "benign": 300,
+              "malicious": 47
+            },
+            "test": {
+              "benign": 300,
+              "malicious": 66
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "default",
+            "positive_weight_multiplier": 1.0,
+            "threshold_target_fpr": 0.1,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.5,
+            "excluded_structured_features": [],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "bash": {
+          "artifact": "xgb_malicious_bash.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.5323631296157837,
+            "uncertain_low": 0.43236313,
+            "uncertain_high": 0.58236313,
+            "validation_fpr": 0.04,
+            "validation_precision": 0.9951,
+            "validation_fnr": 0.0194,
+            "validation_recall": 0.9806,
+            "validation_f1": 0.9878,
+            "target_fpr": 0.05,
+            "target_precision": 0.92,
+            "target_fnr": 0.1,
+            "plateau_position": 0.95,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 160,
+            "accuracy": 0.9688,
+            "precision": 0.9643,
+            "recall": 0.9908,
+            "f1": 0.9774,
+            "pr_auc": 0.9989,
+            "false_positive_rate": 0.0784,
+            "false_negative_rate": 0.0092,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                47,
+                4
+              ],
+              [
+                1,
+                108
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 231,
+            "accuracy": 0.9784,
+            "precision": 0.9951,
+            "recall": 0.9806,
+            "f1": 0.9878,
+            "pr_auc": 0.9996,
+            "false_positive_rate": 0.04,
+            "false_negative_rate": 0.0194,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                24,
+                1
+              ],
+              [
+                4,
+                202
+              ]
+            ]
+          },
+          "test": {
+            "samples": 160,
+            "accuracy": 0.9688,
+            "precision": 0.9643,
+            "recall": 0.9908,
+            "f1": 0.9774,
+            "pr_auc": 0.9989,
+            "false_positive_rate": 0.0784,
+            "false_negative_rate": 0.0092,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                47,
+                4
+              ],
+              [
+                1,
+                108
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v64_behavior_chain_routes\\bash.jsonl",
+          "split_counts": {
+            "train": 1783,
+            "validation": 231,
+            "test": 160
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 723,
+              "malicious": 1060
+            },
+            "validation": {
+              "benign": 25,
+              "malicious": 206
+            },
+            "test": {
+              "benign": 51,
+              "malicious": 109
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.0,
+            "threshold_target_fpr": 0.05,
+            "threshold_target_precision": 0.92,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.95,
+            "excluded_structured_features": [],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "c": {
+          "artifact": "xgb_malicious_c.joblib",
+          "feature_mode": "structured_static",
+          "thresholds": {
+            "decision": 0.1,
+            "uncertain_low": 0.05,
+            "uncertain_high": 0.15,
+            "validation_fpr": 0.0018,
+            "validation_precision": 0.9756,
+            "validation_fnr": 0.0244,
+            "validation_recall": 0.9756,
+            "validation_f1": 0.9756,
+            "target_fpr": 0.08,
+            "target_precision": 0.9,
+            "target_fnr": 0.08,
+            "plateau_position": 0.0,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 641,
+            "accuracy": 0.9922,
+            "precision": 0.9091,
+            "recall": 0.9756,
+            "f1": 0.9412,
+            "pr_auc": 0.9972,
+            "false_positive_rate": 0.0067,
+            "false_negative_rate": 0.0244,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                596,
+                4
+              ],
+              [
+                1,
+                40
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 604,
+            "accuracy": 0.9967,
+            "precision": 0.9756,
+            "recall": 0.9756,
+            "f1": 0.9756,
+            "pr_auc": 0.9825,
+            "false_positive_rate": 0.0018,
+            "false_negative_rate": 0.0244,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                562,
+                1
+              ],
+              [
+                1,
+                40
+              ]
+            ]
+          },
+          "test": {
+            "samples": 641,
+            "accuracy": 0.9922,
+            "precision": 0.9091,
+            "recall": 0.9756,
+            "f1": 0.9412,
+            "pr_auc": 0.9972,
+            "false_positive_rate": 0.0067,
+            "false_negative_rate": 0.0244,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                596,
+                4
+              ],
+              [
+                1,
+                40
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v50_all_language_routes\\c.jsonl",
+          "split_counts": {
+            "train": 2800,
+            "validation": 604,
+            "test": 641
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 2500,
+              "malicious": 300
+            },
+            "validation": {
+              "benign": 563,
+              "malicious": 41
+            },
+            "test": {
+              "benign": 600,
+              "malicious": 41
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.08,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.08,
+            "threshold_plateau_position": 0.0,
+            "excluded_structured_features": [],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "config": {
+          "artifact": "xgb_malicious_config.joblib",
+          "feature_mode": "structured_static",
+          "thresholds": {
+            "decision": 0.405,
+            "uncertain_low": 0.305,
+            "uncertain_high": 0.455,
+            "validation_fpr": 0.0,
+            "validation_precision": 1.0,
+            "validation_fnr": 0.0667,
+            "validation_recall": 0.9333,
+            "validation_f1": 0.9655,
+            "target_fpr": 0.08,
+            "target_precision": 0.9,
+            "target_fnr": 0.08,
+            "plateau_position": 0.0,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 369,
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "pr_auc": 1.0,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                357,
+                0
+              ],
+              [
+                0,
+                12
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 390,
+            "accuracy": 0.9974,
+            "precision": 1.0,
+            "recall": 0.9333,
+            "f1": 0.9655,
+            "pr_auc": 0.9922,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0667,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                375,
+                0
+              ],
+              [
+                1,
+                14
+              ]
+            ]
+          },
+          "test": {
+            "samples": 369,
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "pr_auc": 1.0,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                357,
+                0
+              ],
+              [
+                0,
+                12
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v50_all_language_routes\\config.jsonl",
+          "split_counts": {
+            "train": 1688,
+            "validation": 390,
+            "test": 369
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 1537,
+              "malicious": 151
+            },
+            "validation": {
+              "benign": 375,
+              "malicious": 15
+            },
+            "test": {
+              "benign": 357,
+              "malicious": 12
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.08,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.08,
+            "threshold_plateau_position": 0.0,
+            "excluded_structured_features": [],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "cpp": {
+          "artifact": "xgb_malicious_cpp.joblib",
+          "feature_mode": "structured_static",
+          "thresholds": {
+            "decision": 0.695,
+            "uncertain_low": 0.595,
+            "uncertain_high": 0.745,
+            "validation_fpr": 0.0033,
+            "validation_precision": 0.9794,
+            "validation_fnr": 0.0,
+            "validation_recall": 1.0,
+            "validation_f1": 0.9896,
+            "target_fpr": 0.08,
+            "target_precision": 0.9,
+            "target_fnr": 0.08,
+            "plateau_position": 0.0,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 518,
+            "accuracy": 0.9903,
+            "precision": 0.9796,
+            "recall": 0.9697,
+            "f1": 0.9746,
+            "pr_auc": 0.9989,
+            "false_positive_rate": 0.0048,
+            "false_negative_rate": 0.0303,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                417,
+                2
+              ],
+              [
+                3,
+                96
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 695,
+            "accuracy": 0.9971,
+            "precision": 0.9794,
+            "recall": 1.0,
+            "f1": 0.9896,
+            "pr_auc": 0.9972,
+            "false_positive_rate": 0.0033,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                598,
+                2
+              ],
+              [
+                0,
+                95
+              ]
+            ]
+          },
+          "test": {
+            "samples": 518,
+            "accuracy": 0.9903,
+            "precision": 0.9796,
+            "recall": 0.9697,
+            "f1": 0.9746,
+            "pr_auc": 0.9989,
+            "false_positive_rate": 0.0048,
+            "false_negative_rate": 0.0303,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                417,
+                2
+              ],
+              [
+                3,
+                96
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v50_all_language_routes\\cpp.jsonl",
+          "split_counts": {
+            "train": 2567,
+            "validation": 695,
+            "test": 518
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 2011,
+              "malicious": 556
+            },
+            "validation": {
+              "benign": 600,
+              "malicious": 95
+            },
+            "test": {
+              "benign": 419,
+              "malicious": 99
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.08,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.08,
+            "threshold_plateau_position": 0.0,
+            "excluded_structured_features": [],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "csharp": {
+          "artifact": "xgb_malicious_classifier.joblib",
+          "feature_mode": "static",
+          "thresholds": {
+            "decision": 0.165,
+            "uncertain_low": 0.065,
+            "uncertain_high": 0.215,
+            "validation_fpr": 0.0177,
+            "validation_precision": 0.9575,
+            "validation_fnr": 0.049,
+            "validation_recall": 0.951,
+            "validation_f1": 0.9542,
+            "target_fpr": 0.05,
+            "target_precision": 0.93,
+            "target_fnr": 0.05,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "validation": null,
+          "test": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "malicious_intent"
+        },
+        "go": {
+          "artifact": "xgb_malicious_go.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.587784006357193,
+            "uncertain_low": 0.48778401,
+            "uncertain_high": 0.63778401,
+            "validation_fpr": 0.0029,
+            "validation_precision": 0.9091,
+            "validation_fnr": 0.0909,
+            "validation_recall": 0.9091,
+            "validation_f1": 0.9091,
+            "target_fpr": 0.1,
+            "target_precision": 0.9,
+            "target_fnr": 0.1,
+            "plateau_position": 0.95,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 358,
+            "accuracy": 0.9972,
+            "precision": 1.0,
+            "recall": 0.9,
+            "f1": 0.9474,
+            "pr_auc": 0.9833,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.1,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                348,
+                0
+              ],
+              [
+                1,
+                9
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 359,
+            "accuracy": 0.9944,
+            "precision": 0.9091,
+            "recall": 0.9091,
+            "f1": 0.9091,
+            "pr_auc": 0.874,
+            "false_positive_rate": 0.0029,
+            "false_negative_rate": 0.0909,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                347,
+                1
+              ],
+              [
+                1,
+                10
+              ]
+            ]
+          },
+          "test": {
+            "samples": 358,
+            "accuracy": 0.9972,
+            "precision": 1.0,
+            "recall": 0.9,
+            "f1": 0.9474,
+            "pr_auc": 0.9833,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.1,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                348,
+                0
+              ],
+              [
+                1,
+                9
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v64_behavior_chain_routes\\go.jsonl",
+          "split_counts": {
+            "train": 1714,
+            "validation": 359,
+            "test": 358
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 1449,
+              "malicious": 265
+            },
+            "validation": {
+              "benign": 348,
+              "malicious": 11
+            },
+            "test": {
+              "benign": 348,
+              "malicious": 10
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.1,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.95,
+            "excluded_structured_features": [
+              "file_local_behavior_group_count",
+              "file_local_multi_behavior_group_proxy"
+            ],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "html": {
+          "artifact": "xgb_malicious_html.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.285,
+            "uncertain_low": 0.185,
+            "uncertain_high": 0.335,
+            "validation_fpr": 0.059,
+            "validation_precision": 0.9179,
+            "validation_fnr": 0.0575,
+            "validation_recall": 0.9425,
+            "validation_f1": 0.9301,
+            "target_fpr": 0.1,
+            "target_precision": 0.9,
+            "target_fnr": 0.05,
+            "plateau_position": 0.0,
+            "quality_gate_passed": false
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 654,
+            "accuracy": 0.9297,
+            "precision": 0.9286,
+            "recall": 0.9015,
+            "f1": 0.9148,
+            "pr_auc": 0.9704,
+            "false_positive_rate": 0.05,
+            "false_negative_rate": 0.0985,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                361,
+                19
+              ],
+              [
+                27,
+                247
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 634,
+            "accuracy": 0.9416,
+            "precision": 0.9179,
+            "recall": 0.9425,
+            "f1": 0.9301,
+            "pr_auc": 0.9746,
+            "false_positive_rate": 0.059,
+            "false_negative_rate": 0.0575,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                351,
+                22
+              ],
+              [
+                15,
+                246
+              ]
+            ]
+          },
+          "test": {
+            "samples": 654,
+            "accuracy": 0.9297,
+            "precision": 0.9286,
+            "recall": 0.9015,
+            "f1": 0.9148,
+            "pr_auc": 0.9704,
+            "false_positive_rate": 0.05,
+            "false_negative_rate": 0.0985,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                361,
+                19
+              ],
+              [
+                27,
+                247
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v58_all_language_routes\\html.jsonl",
+          "split_counts": {
+            "train": 2924,
+            "validation": 634,
+            "test": 654
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 1628,
+              "malicious": 1296
+            },
+            "validation": {
+              "benign": 373,
+              "malicious": 261
+            },
+            "test": {
+              "benign": 380,
+              "malicious": 274
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.1,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.05,
+            "threshold_plateau_position": 0.0,
+            "excluded_structured_features": [],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "kotlin": {
+          "artifact": "xgb_malicious_classifier.joblib",
+          "feature_mode": "static",
+          "thresholds": {
+            "decision": 0.165,
+            "uncertain_low": 0.065,
+            "uncertain_high": 0.215,
+            "validation_fpr": 0.0177,
+            "validation_precision": 0.9575,
+            "validation_fnr": 0.049,
+            "validation_recall": 0.951,
+            "validation_f1": 0.9542,
+            "target_fpr": 0.05,
+            "target_precision": 0.93,
+            "target_fnr": 0.05,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "validation": null,
+          "test": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "malicious_intent"
+        },
+        "lua": {
+          "artifact": "xgb_malicious_classifier.joblib",
+          "feature_mode": "static",
+          "thresholds": {
+            "decision": 0.165,
+            "uncertain_low": 0.065,
+            "uncertain_high": 0.215,
+            "validation_fpr": 0.0177,
+            "validation_precision": 0.9575,
+            "validation_fnr": 0.049,
+            "validation_recall": 0.951,
+            "validation_f1": 0.9542,
+            "target_fpr": 0.05,
+            "target_precision": 0.93,
+            "target_fnr": 0.05,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "validation": null,
+          "test": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "malicious_intent"
+        },
+        "perl": {
+          "artifact": "xgb_malicious_classifier.joblib",
+          "feature_mode": "static",
+          "thresholds": {
+            "decision": 0.165,
+            "uncertain_low": 0.065,
+            "uncertain_high": 0.215,
+            "validation_fpr": 0.0177,
+            "validation_precision": 0.9575,
+            "validation_fnr": 0.049,
+            "validation_recall": 0.951,
+            "validation_f1": 0.9542,
+            "target_fpr": 0.05,
+            "target_precision": 0.93,
+            "target_fnr": 0.05,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "validation": null,
+          "test": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "malicious_intent"
+        },
+        "ruby": {
+          "artifact": "xgb_malicious_ruby.joblib",
+          "feature_mode": "structured_static",
+          "thresholds": {
+            "decision": 0.04,
+            "uncertain_low": 0.05,
+            "uncertain_high": 0.09,
+            "validation_fpr": 0.0,
+            "validation_precision": 1.0,
+            "validation_fnr": 0.0909,
+            "validation_recall": 0.9091,
+            "validation_f1": 0.9524,
+            "target_fpr": 0.08,
+            "target_precision": 0.9,
+            "target_fnr": 0.08,
+            "plateau_position": 0.0,
+            "quality_gate_passed": false
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 311,
+            "accuracy": 0.9968,
+            "precision": 0.9167,
+            "recall": 1.0,
+            "f1": 0.9565,
+            "pr_auc": 0.9924,
+            "false_positive_rate": 0.0033,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                299,
+                1
+              ],
+              [
+                0,
+                11
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 97,
+            "accuracy": 0.9897,
+            "precision": 1.0,
+            "recall": 0.9091,
+            "f1": 0.9524,
+            "pr_auc": 0.9805,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0909,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                86,
+                0
+              ],
+              [
+                1,
+                10
+              ]
+            ]
+          },
+          "test": {
+            "samples": 311,
+            "accuracy": 0.9968,
+            "precision": 0.9167,
+            "recall": 1.0,
+            "f1": 0.9565,
+            "pr_auc": 0.9924,
+            "false_positive_rate": 0.0033,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                299,
+                1
+              ],
+              [
+                0,
+                11
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v47_all_language_routes\\ruby.jsonl",
+          "split_counts": {
+            "train": 813,
+            "validation": 97,
+            "test": 311
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 787,
+              "malicious": 26
+            },
+            "validation": {
+              "benign": 86,
+              "malicious": 11
+            },
+            "test": {
+              "benign": 300,
+              "malicious": 11
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.08,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.08,
+            "threshold_plateau_position": 0.0,
+            "excluded_structured_features": [],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "rust": {
+          "artifact": "xgb_malicious_rust.joblib",
+          "feature_mode": "structured_static",
+          "thresholds": {
+            "decision": 0.01,
+            "uncertain_low": 0.05,
+            "uncertain_high": 0.06,
+            "validation_fpr": 0.0,
+            "validation_precision": 1.0,
+            "validation_fnr": 0.0909,
+            "validation_recall": 0.9091,
+            "validation_f1": 0.9524,
+            "target_fpr": 0.08,
+            "target_precision": 0.9,
+            "target_fnr": 0.08,
+            "plateau_position": 0.0,
+            "quality_gate_passed": false
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 367,
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "pr_auc": 1.0,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                349,
+                0
+              ],
+              [
+                0,
+                18
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 361,
+            "accuracy": 0.9972,
+            "precision": 1.0,
+            "recall": 0.9091,
+            "f1": 0.9524,
+            "pr_auc": 0.9545,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0909,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                350,
+                0
+              ],
+              [
+                1,
+                10
+              ]
+            ]
+          },
+          "test": {
+            "samples": 367,
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "pr_auc": 1.0,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                349,
+                0
+              ],
+              [
+                0,
+                18
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v58_all_language_routes\\rust.jsonl",
+          "split_counts": {
+            "train": 1055,
+            "validation": 361,
+            "test": 367
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 1040,
+              "malicious": 15
+            },
+            "validation": {
+              "benign": 350,
+              "malicious": 11
+            },
+            "test": {
+              "benign": 349,
+              "malicious": 18
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.08,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.08,
+            "threshold_plateau_position": 0.0,
+            "excluded_structured_features": [],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        },
+        "scala": {
+          "artifact": "xgb_malicious_classifier.joblib",
+          "feature_mode": "static",
+          "thresholds": {
+            "decision": 0.165,
+            "uncertain_low": 0.065,
+            "uncertain_high": 0.215,
+            "validation_fpr": 0.0177,
+            "validation_precision": 0.9575,
+            "validation_fnr": 0.049,
+            "validation_recall": 0.951,
+            "validation_f1": 0.9542,
+            "target_fpr": 0.05,
+            "target_precision": 0.93,
+            "target_fnr": 0.05,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "validation": null,
+          "test": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "malicious_intent"
+        },
+        "sql": {
+          "artifact": "xgb_malicious_classifier.joblib",
+          "feature_mode": "static",
+          "thresholds": {
+            "decision": 0.165,
+            "uncertain_low": 0.065,
+            "uncertain_high": 0.215,
+            "validation_fpr": 0.0177,
+            "validation_precision": 0.9575,
+            "validation_fnr": 0.049,
+            "validation_recall": 0.951,
+            "validation_f1": 0.9542,
+            "target_fpr": 0.05,
+            "target_precision": 0.93,
+            "target_fnr": 0.05,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "validation": null,
+          "test": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "malicious_intent"
+        },
+        "typescript": {
+          "artifact": "xgb_malicious_classifier.joblib",
+          "feature_mode": "static",
+          "thresholds": {
+            "decision": 0.165,
+            "uncertain_low": 0.065,
+            "uncertain_high": 0.215,
+            "validation_fpr": 0.0177,
+            "validation_precision": 0.9575,
+            "validation_fnr": 0.049,
+            "validation_recall": 0.951,
+            "validation_f1": 0.9542,
+            "target_fpr": 0.05,
+            "target_precision": 0.93,
+            "target_fnr": 0.05,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "validation": null,
+          "test": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "malicious_intent"
+        },
+        "unknown": {
+          "artifact": "xgb_malicious_classifier.joblib",
+          "feature_mode": "static",
+          "thresholds": {
+            "decision": 0.165,
+            "uncertain_low": 0.065,
+            "uncertain_high": 0.215,
+            "validation_fpr": 0.0177,
+            "validation_precision": 0.9575,
+            "validation_fnr": 0.049,
+            "validation_recall": 0.951,
+            "validation_f1": 0.9542,
+            "target_fpr": 0.05,
+            "target_precision": 0.93,
+            "target_fnr": 0.05,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "validation": null,
+          "test": {
+            "samples": 7939,
+            "precision": 0.8139,
+            "false_positive_rate": 0.0502,
+            "false_negative_rate": 0.0779,
+            "quality_gate_passed": false
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "malicious_intent"
+        },
+        "powershell": {
+          "artifact": "xgb_malicious_powershell.joblib",
+          "feature_mode": "structured_static",
+          "thresholds": {
+            "decision": 0.43,
+            "uncertain_low": 0.33,
+            "uncertain_high": 0.48,
+            "validation_fpr": 0.0067,
+            "validation_precision": 0.9623,
+            "validation_fnr": 0.0556,
+            "validation_recall": 0.9444,
+            "validation_f1": 0.9533,
+            "target_fpr": 0.08,
+            "target_precision": 0.9,
+            "target_fnr": 0.08,
+            "plateau_position": 0.0,
+            "quality_gate_passed": true
+          },
+          "evaluation_scope": "file",
+          "deployment": {
+            "samples": 374,
+            "accuracy": 0.9866,
+            "precision": 0.9286,
+            "recall": 0.9811,
+            "f1": 0.9541,
+            "pr_auc": 0.9947,
+            "false_positive_rate": 0.0125,
+            "false_negative_rate": 0.0189,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                317,
+                4
+              ],
+              [
+                1,
+                52
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 354,
+            "accuracy": 0.9859,
+            "precision": 0.9623,
+            "recall": 0.9444,
+            "f1": 0.9533,
+            "pr_auc": 0.9862,
+            "false_positive_rate": 0.0067,
+            "false_negative_rate": 0.0556,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                298,
+                2
+              ],
+              [
+                3,
+                51
+              ]
+            ]
+          },
+          "test": {
+            "samples": 374,
+            "accuracy": 0.9866,
+            "precision": 0.9286,
+            "recall": 0.9811,
+            "f1": 0.9541,
+            "pr_auc": 0.9947,
+            "false_positive_rate": 0.0125,
+            "false_negative_rate": 0.0189,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                317,
+                4
+              ],
+              [
+                1,
+                52
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "source_heldout_verified": null,
+          "evaluation_protocol": "family_split",
+          "release_scope": "strict_family_held_out_file_evaluation",
+          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v64_behavior_chain_routes\\powershell.jsonl",
+          "split_counts": {
+            "train": 1293,
+            "validation": 354,
+            "test": 374
+          },
+          "split_label_counts": {
+            "train": {
+              "benign": 1072,
+              "malicious": 221
+            },
+            "validation": {
+              "benign": 300,
+              "malicious": 54
+            },
+            "test": {
+              "benign": 321,
+              "malicious": 53
+            }
+          },
+          "sampling_protocol": {
+            "max_per_language_split_class": null,
+            "balanced_split_classes": false,
+            "balanced_eval_classes": false,
+            "positive_weight_mode": "balanced",
+            "positive_weight_multiplier": 1.5,
+            "threshold_target_fpr": 0.08,
+            "threshold_target_precision": 0.9,
+            "threshold_target_fnr": 0.08,
+            "threshold_plateau_position": 0.0,
+            "excluded_structured_features": [],
+            "calibration_mode": "sigmoid",
+            "deterministic": true,
+            "family_assignment_precedes_sampling": true
+          }
+        }
+      },
+      "deployment_by_language": {
+        "java": {
+          "samples": 447,
+          "accuracy": 0.9866,
+          "precision": 0.993,
+          "recall": 0.966,
+          "f1": 0.9793,
+          "pr_auc": 0.9996,
+          "false_positive_rate": 0.0033,
+          "false_negative_rate": 0.034,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              299,
+              1
+            ],
+            [
+              5,
+              142
+            ]
+          ]
+        },
+        "javascript": {
+          "samples": 695,
+          "accuracy": 0.9669,
+          "precision": 0.9604,
+          "recall": 0.9823,
+          "f1": 0.9712,
+          "pr_auc": 0.9973,
+          "false_positive_rate": 0.0533,
+          "false_negative_rate": 0.0177,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              284,
+              16
+            ],
+            [
+              7,
+              388
+            ]
+          ]
+        },
+        "php": {
+          "samples": 600,
+          "accuracy": 0.9633,
+          "precision": 0.9633,
+          "recall": 0.9633,
+          "f1": 0.9633,
+          "pr_auc": 0.9927,
+          "false_positive_rate": 0.0367,
+          "false_negative_rate": 0.0367,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              289,
+              11
+            ],
+            [
+              11,
+              289
+            ]
+          ]
+        },
+        "python": {
+          "samples": 366,
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "pr_auc": 1.0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 0.0,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              300,
+              0
+            ],
+            [
+              0,
+              66
+            ]
+          ]
+        },
+        "bash": {
+          "samples": 160,
+          "accuracy": 0.9688,
+          "precision": 0.9643,
+          "recall": 0.9908,
+          "f1": 0.9774,
+          "pr_auc": 0.9989,
+          "false_positive_rate": 0.0784,
+          "false_negative_rate": 0.0092,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              47,
+              4
+            ],
+            [
+              1,
+              108
+            ]
+          ]
+        },
+        "c": {
+          "samples": 641,
+          "accuracy": 0.9922,
+          "precision": 0.9091,
+          "recall": 0.9756,
+          "f1": 0.9412,
+          "pr_auc": 0.9972,
+          "false_positive_rate": 0.0067,
+          "false_negative_rate": 0.0244,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              596,
+              4
+            ],
+            [
+              1,
+              40
+            ]
+          ]
+        },
+        "config": {
+          "samples": 369,
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "pr_auc": 1.0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 0.0,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              357,
+              0
+            ],
+            [
+              0,
+              12
+            ]
+          ]
+        },
+        "cpp": {
+          "samples": 518,
+          "accuracy": 0.9903,
+          "precision": 0.9796,
+          "recall": 0.9697,
+          "f1": 0.9746,
+          "pr_auc": 0.9989,
+          "false_positive_rate": 0.0048,
+          "false_negative_rate": 0.0303,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              417,
+              2
+            ],
+            [
+              3,
+              96
+            ]
+          ]
+        },
+        "csharp": {
+          "samples": 7939,
+          "precision": 0.8139,
+          "false_positive_rate": 0.0502,
+          "false_negative_rate": 0.0779,
+          "quality_gate_passed": false
+        },
+        "go": {
+          "samples": 358,
+          "accuracy": 0.9972,
+          "precision": 1.0,
+          "recall": 0.9,
+          "f1": 0.9474,
+          "pr_auc": 0.9833,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 0.1,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              348,
+              0
+            ],
+            [
+              1,
+              9
+            ]
+          ]
+        },
+        "html": {
+          "samples": 654,
+          "accuracy": 0.9297,
+          "precision": 0.9286,
+          "recall": 0.9015,
+          "f1": 0.9148,
+          "pr_auc": 0.9704,
+          "false_positive_rate": 0.05,
+          "false_negative_rate": 0.0985,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              361,
+              19
+            ],
+            [
+              27,
+              247
+            ]
+          ]
+        },
+        "kotlin": {
+          "samples": 7939,
+          "precision": 0.8139,
+          "false_positive_rate": 0.0502,
+          "false_negative_rate": 0.0779,
+          "quality_gate_passed": false
+        },
+        "lua": {
+          "samples": 7939,
+          "precision": 0.8139,
+          "false_positive_rate": 0.0502,
+          "false_negative_rate": 0.0779,
+          "quality_gate_passed": false
+        },
+        "perl": {
+          "samples": 7939,
+          "precision": 0.8139,
+          "false_positive_rate": 0.0502,
+          "false_negative_rate": 0.0779,
+          "quality_gate_passed": false
+        },
+        "ruby": {
+          "samples": 311,
+          "accuracy": 0.9968,
+          "precision": 0.9167,
+          "recall": 1.0,
+          "f1": 0.9565,
+          "pr_auc": 0.9924,
+          "false_positive_rate": 0.0033,
+          "false_negative_rate": 0.0,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              299,
+              1
+            ],
+            [
+              0,
+              11
+            ]
+          ]
+        },
+        "rust": {
+          "samples": 367,
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "pr_auc": 1.0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 0.0,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              349,
+              0
+            ],
+            [
+              0,
+              18
+            ]
+          ]
+        },
+        "scala": {
+          "samples": 7939,
+          "precision": 0.8139,
+          "false_positive_rate": 0.0502,
+          "false_negative_rate": 0.0779,
+          "quality_gate_passed": false
+        },
+        "sql": {
+          "samples": 7939,
+          "precision": 0.8139,
+          "false_positive_rate": 0.0502,
+          "false_negative_rate": 0.0779,
+          "quality_gate_passed": false
+        },
+        "typescript": {
+          "samples": 7939,
+          "precision": 0.8139,
+          "false_positive_rate": 0.0502,
+          "false_negative_rate": 0.0779,
+          "quality_gate_passed": false
+        },
+        "unknown": {
+          "samples": 7939,
+          "precision": 0.8139,
+          "false_positive_rate": 0.0502,
+          "false_negative_rate": 0.0779,
+          "quality_gate_passed": false
+        },
+        "powershell": {
+          "samples": 374,
+          "accuracy": 0.9866,
+          "precision": 0.9286,
+          "recall": 0.9811,
+          "f1": 0.9541,
+          "pr_auc": 0.9947,
+          "false_positive_rate": 0.0125,
+          "false_negative_rate": 0.0189,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              317,
+              4
+            ],
+            [
+              1,
+              52
+            ]
+          ]
+        }
+      },
+      "release_scope": "strict family-held-out routes where independently validated; remaining recognized languages retain the prior unvalidated fallback",
+      "strict_supported_languages": [
+        "bash",
+        "c",
+        "config",
+        "cpp",
+        "go",
+        "html",
+        "java",
+        "javascript",
+        "php",
+        "powershell",
+        "python",
+        "ruby",
+        "rust"
+      ],
+      "fallback_languages": [
+        "batch",
+        "csharp",
+        "kotlin",
+        "lua",
+        "perl",
+        "scala",
+        "sql",
+        "typescript",
+        "unknown"
+      ]
+    },
+    "vulnerability_risk": {
+      "samples": 7372,
+      "accuracy": 0.6899,
+      "precision": 0.482,
+      "recall": 0.6121,
+      "f1": 0.5393,
+      "pr_auc": 0.5276,
+      "false_positive_rate": 0.2773,
+      "false_negative_rate": 0.3879,
+      "quality_gate_passed": false,
+      "confusion_matrix": [
+        [
+          3748,
+          1438
+        ],
+        [
+          848,
+          1338
+        ]
+      ],
+      "ready": true,
+      "task": "vulnerability_risk",
+      "engine": "xgboost+sigmoid_calibration",
+      "calibrated": true,
+      "calibration_split": "validation",
+      "labels": [
+        "benign",
+        "vulnerable"
+      ],
+      "positive_label": "vulnerable",
+      "negative_label": "benign",
+      "artifact": "xgb_vulnerability_classifier.joblib",
+      "train_samples": 21783,
+      "validation_samples": 4798,
+      "test_samples": 7372,
+      "deployment_test_samples": 7355,
+      "unsupported_test_samples": 17,
+      "train_positive_samples": 3972,
+      "train_unique_positive_families": 2251,
+      "supported_languages": [
+        "bash",
+        "c",
+        "config",
+        "cpp",
+        "csharp",
+        "go",
+        "html",
+        "java",
+        "javascript",
+        "kotlin",
+        "lua",
+        "perl",
+        "php",
+        "python",
+        "ruby",
+        "rust",
+        "scala",
+        "sql",
+        "typescript",
+        "unknown"
+      ],
+      "language_coverage": {
+        "bash": {
+          "train": {
+            "benign": 23,
+            "vulnerable": 20,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 6,
+            "vulnerable": 5,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 16,
+            "vulnerable": 15,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "c": {
+          "train": {
+            "benign": 865,
+            "vulnerable": 839,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 209,
+            "vulnerable": 194,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 261,
+            "vulnerable": 257,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "config": {
+          "train": {
+            "benign": 169,
+            "vulnerable": 75,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 31,
+            "vulnerable": 17,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 32,
+            "vulnerable": 22,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "cpp": {
+          "train": {
+            "benign": 232,
+            "vulnerable": 217,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 68,
+            "vulnerable": 58,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 64,
+            "vulnerable": 64,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "csharp": {
+          "train": {
+            "benign": 58,
+            "vulnerable": 56,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 14,
+            "vulnerable": 11,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 22,
+            "vulnerable": 20,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "go": {
+          "train": {
+            "benign": 2601,
+            "vulnerable": 105,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 521,
+            "vulnerable": 23,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 544,
+            "vulnerable": 38,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "html": {
+          "train": {
+            "benign": 48,
+            "vulnerable": 37,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 13,
+            "vulnerable": 12,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 20,
+            "vulnerable": 20,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "java": {
+          "train": {
+            "benign": 3444,
+            "vulnerable": 934,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 714,
+            "vulnerable": 223,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 814,
+            "vulnerable": 316,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "javascript": {
+          "train": {
+            "benign": 3009,
+            "vulnerable": 381,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 684,
+            "vulnerable": 85,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 753,
+            "vulnerable": 120,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "lua": {
+          "train": {
+            "benign": 7,
+            "vulnerable": 7,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 1,
+            "vulnerable": 2,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 4,
+            "vulnerable": 3,
+            "minimum_per_class": 10
+          },
+          "eligible": false
+        },
+        "perl": {
+          "train": {
+            "benign": 28,
+            "vulnerable": 26,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 10,
+            "vulnerable": 11,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 21,
+            "vulnerable": 20,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "php": {
+          "train": {
+            "benign": 5413,
+            "vulnerable": 762,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 1188,
+            "vulnerable": 176,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 2363,
+            "vulnerable": 1109,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "python": {
+          "train": {
+            "benign": 1645,
+            "vulnerable": 261,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 333,
+            "vulnerable": 60,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 174,
+            "vulnerable": 80,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "ruby": {
+          "train": {
+            "benign": 256,
+            "vulnerable": 239,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 65,
+            "vulnerable": 55,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 75,
+            "vulnerable": 79,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        },
+        "rust": {
+          "train": {
+            "benign": 16,
+            "vulnerable": 15,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 2,
+            "vulnerable": 1,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 1,
+            "vulnerable": 1,
+            "minimum_per_class": 10
+          },
+          "eligible": false
+        },
+        "scala": {
+          "train": {
+            "benign": 14,
+            "vulnerable": 11,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 4,
+            "vulnerable": 4,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 3,
+            "vulnerable": 3,
+            "minimum_per_class": 10
+          },
+          "eligible": false
+        },
+        "sql": {
+          "train": {
+            "benign": 6,
+            "vulnerable": 5,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 2,
+            "vulnerable": 2,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 1,
+            "vulnerable": 1,
+            "minimum_per_class": 10
+          },
+          "eligible": false
+        },
+        "typescript": {
+          "train": {
+            "benign": 20,
+            "vulnerable": 20,
+            "minimum_per_class": 20
+          },
+          "validation": {
+            "benign": 6,
+            "vulnerable": 6,
+            "minimum_per_class": 5
+          },
+          "test": {
+            "benign": 18,
+            "vulnerable": 18,
+            "minimum_per_class": 10
+          },
+          "eligible": true
+        }
+      },
+      "deployment": {
+        "samples": 7355,
+        "accuracy": 0.6906,
+        "precision": 0.4822,
+        "recall": 0.6111,
+        "f1": 0.5391,
+        "pr_auc": 0.528,
+        "false_positive_rate": 0.276,
+        "false_negative_rate": 0.3889,
+        "quality_gate_passed": false,
+        "confusion_matrix": [
+          [
+            3748,
+            1429
+          ],
+          [
+            847,
+            1331
+          ]
+        ]
+      },
+      "thresholds": {
+        "decision": 0.1438,
+        "uncertain_low": 0.05,
+        "uncertain_high": 0.1938,
+        "validation_fpr": 0.2563,
+        "validation_precision": 0.4548,
+        "validation_fnr": 0.1175,
+        "validation_recall": 0.8825,
+        "validation_f1": 0.6003,
+        "target_fpr": 0.05,
+        "target_precision": 0.93,
+        "target_fnr": 0.05,
+        "quality_gate_passed": false
+      },
+      "validation": {
+        "samples": 4798,
+        "accuracy": 0.7707,
+        "precision": 0.4548,
+        "recall": 0.8825,
+        "f1": 0.6003,
+        "pr_auc": 0.5681,
+        "false_positive_rate": 0.2563,
+        "false_negative_rate": 0.1175,
+        "quality_gate_passed": false,
+        "confusion_matrix": [
+          [
+            2872,
+            990
+          ],
+          [
+            110,
+            826
+          ]
+        ]
+      },
+      "by_language": {
+        "bash": {
+          "samples": 31,
+          "accuracy": 0.5484,
+          "precision": 0.5172,
+          "recall": 1.0,
+          "f1": 0.6818,
+          "pr_auc": 0.5826,
+          "false_positive_rate": 0.875,
+          "false_negative_rate": 0.0,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              2,
+              14
+            ],
+            [
+              0,
+              15
+            ]
+          ]
+        },
+        "c": {
+          "samples": 518,
+          "accuracy": 0.4961,
+          "precision": 0.4961,
+          "recall": 1.0,
+          "f1": 0.6632,
+          "pr_auc": 0.4762,
+          "false_positive_rate": 1.0,
+          "false_negative_rate": 0.0,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              0,
+              261
+            ],
+            [
+              0,
+              257
+            ]
+          ]
+        },
+        "config": {
+          "samples": 54,
+          "accuracy": 0.4259,
+          "precision": 0.4,
+          "recall": 0.8182,
+          "f1": 0.5373,
+          "pr_auc": 0.3572,
+          "false_positive_rate": 0.8438,
+          "false_negative_rate": 0.1818,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              5,
+              27
+            ],
+            [
+              4,
+              18
+            ]
+          ]
+        },
+        "cpp": {
+          "samples": 128,
+          "accuracy": 0.4922,
+          "precision": 0.4961,
+          "recall": 0.9844,
+          "f1": 0.6597,
+          "pr_auc": 0.4855,
+          "false_positive_rate": 1.0,
+          "false_negative_rate": 0.0156,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              0,
+              64
+            ],
+            [
+              1,
+              63
+            ]
+          ]
+        },
+        "csharp": {
+          "samples": 42,
+          "accuracy": 0.4762,
+          "precision": 0.4643,
+          "recall": 0.65,
+          "f1": 0.5417,
+          "pr_auc": 0.5232,
+          "false_positive_rate": 0.6818,
+          "false_negative_rate": 0.35,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              7,
+              15
+            ],
+            [
+              7,
+              13
+            ]
+          ]
+        },
+        "go": {
+          "samples": 582,
+          "accuracy": 0.9261,
+          "precision": 0.4658,
+          "recall": 0.8947,
+          "f1": 0.6126,
+          "pr_auc": 0.5061,
+          "false_positive_rate": 0.0717,
+          "false_negative_rate": 0.1053,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              505,
+              39
+            ],
+            [
+              4,
+              34
+            ]
+          ]
+        },
+        "html": {
+          "samples": 40,
+          "accuracy": 0.25,
+          "precision": 0.3077,
+          "recall": 0.4,
+          "f1": 0.3478,
+          "pr_auc": 0.3576,
+          "false_positive_rate": 0.9,
+          "false_negative_rate": 0.6,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              2,
+              18
+            ],
+            [
+              12,
+              8
+            ]
+          ]
+        },
+        "java": {
+          "samples": 1130,
+          "accuracy": 0.7858,
+          "precision": 0.5678,
+          "recall": 0.981,
+          "f1": 0.7193,
+          "pr_auc": 0.7812,
+          "false_positive_rate": 0.2899,
+          "false_negative_rate": 0.019,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              578,
+              236
+            ],
+            [
+              6,
+              310
+            ]
+          ]
+        },
+        "javascript": {
+          "samples": 873,
+          "accuracy": 0.8339,
+          "precision": 0.4413,
+          "recall": 0.7833,
+          "f1": 0.5646,
+          "pr_auc": 0.4335,
+          "false_positive_rate": 0.158,
+          "false_negative_rate": 0.2167,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              634,
+              119
+            ],
+            [
+              26,
+              94
+            ]
+          ]
+        },
+        "lua": {
+          "samples": 7,
+          "accuracy": 0.4286,
+          "precision": 0.4286,
+          "recall": 1.0,
+          "f1": 0.6,
+          "pr_auc": 0.4111,
+          "false_positive_rate": 1.0,
+          "false_negative_rate": 0.0,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              3
+            ]
+          ]
+        },
+        "perl": {
+          "samples": 41,
+          "accuracy": 0.5122,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6667,
+          "pr_auc": 0.4949,
+          "false_positive_rate": 0.9524,
+          "false_negative_rate": 0.0,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              1,
+              20
+            ],
+            [
+              0,
+              20
+            ]
+          ]
+        },
+        "php": {
+          "samples": 3472,
+          "accuracy": 0.6475,
+          "precision": 0.4305,
+          "recall": 0.321,
+          "f1": 0.3678,
+          "pr_auc": 0.427,
+          "false_positive_rate": 0.1993,
+          "false_negative_rate": 0.679,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              1892,
+              471
+            ],
+            [
+              753,
+              356
+            ]
+          ]
+        },
+        "python": {
+          "samples": 254,
+          "accuracy": 0.6654,
+          "precision": 0.4771,
+          "recall": 0.65,
+          "f1": 0.5503,
+          "pr_auc": 0.4719,
+          "false_positive_rate": 0.3276,
+          "false_negative_rate": 0.35,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              117,
+              57
+            ],
+            [
+              28,
+              52
+            ]
+          ]
+        },
+        "ruby": {
+          "samples": 154,
+          "accuracy": 0.513,
+          "precision": 0.5132,
+          "recall": 0.9873,
+          "f1": 0.6753,
+          "pr_auc": 0.5106,
+          "false_positive_rate": 0.9867,
+          "false_negative_rate": 0.0127,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              1,
+              74
+            ],
+            [
+              1,
+              78
+            ]
+          ]
+        },
+        "rust": {
+          "samples": 2,
+          "positive_samples": 1,
+          "negative_samples": 1,
+          "insufficient_for_full_metrics": true,
+          "recall": 1.0,
+          "false_positive_rate": 1.0
+        },
+        "scala": {
+          "samples": 6,
+          "accuracy": 0.3333,
+          "precision": 0.4,
+          "recall": 0.6667,
+          "f1": 0.5,
+          "pr_auc": 0.4111,
+          "false_positive_rate": 1.0,
+          "false_negative_rate": 0.3333,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              0,
+              3
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        },
+        "sql": {
+          "samples": 2,
+          "positive_samples": 1,
+          "negative_samples": 1,
+          "insufficient_for_full_metrics": true,
+          "recall": 1.0,
+          "false_positive_rate": 1.0
+        },
+        "typescript": {
+          "samples": 36,
+          "accuracy": 0.4722,
+          "precision": 0.4815,
+          "recall": 0.7222,
+          "f1": 0.5778,
+          "pr_auc": 0.5445,
+          "false_positive_rate": 0.7778,
+          "false_negative_rate": 0.2778,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              4,
+              14
+            ],
+            [
+              5,
+              13
+            ]
+          ]
+        }
+      },
+      "by_source": {
+        "codesearchnet": {
+          "samples": 1993,
+          "positive_samples": 0,
+          "negative_samples": 1993,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.0115
+        },
+        "crossvul": {
+          "samples": 2218,
+          "accuracy": 0.4869,
+          "precision": 0.4847,
+          "recall": 0.8656,
+          "f1": 0.6214,
+          "pr_auc": 0.4663,
+          "false_positive_rate": 0.8718,
+          "false_negative_rate": 0.1344,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              146,
+              993
+            ],
+            [
+              145,
+              934
+            ]
+          ]
+        },
+        "nist_sard_php_sqli": {
+          "samples": 1826,
+          "accuracy": 0.5279,
+          "precision": 0.5208,
+          "recall": 0.1998,
+          "f1": 0.2888,
+          "pr_auc": 0.4882,
+          "false_positive_rate": 0.1695,
+          "false_negative_rate": 0.8002,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              789,
+              161
+            ],
+            [
+              701,
+              175
+            ]
+          ]
+        },
+        "npm_official_registry": {
+          "samples": 127,
+          "positive_samples": 0,
+          "negative_samples": 127,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.0551
+        },
+        "owasp_benchmark_java": {
+          "samples": 451,
+          "accuracy": 0.6718,
+          "precision": 0.6107,
+          "recall": 0.9913,
+          "f1": 0.7558,
+          "pr_auc": 0.856,
+          "false_positive_rate": 0.6636,
+          "false_negative_rate": 0.0087,
+          "quality_gate_passed": false,
+          "confusion_matrix": [
+            [
+              74,
+              146
+            ],
+            [
+              2,
+              229
+            ]
+          ]
+        },
+        "php_webshell_collection": {
+          "samples": 666,
+          "positive_samples": 0,
+          "negative_samples": 666,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.1592
+        },
+        "pypi_official_registry": {
+          "samples": 91,
+          "positive_samples": 0,
+          "negative_samples": 91,
+          "insufficient_for_full_metrics": true,
+          "false_positive_rate": 0.022
+        }
+      },
+      "feature_importance": [
+        {
+          "feature": "line_count",
+          "importance": 0.162343
+        },
+        {
+          "feature": "network_write_execute_proxy",
+          "importance": 0.097296
+        },
+        {
+          "feature": "language_c",
+          "importance": 0.049456
+        },
+        {
+          "feature": "language_ruby",
+          "importance": 0.046277
+        },
+        {
+          "feature": "python_ast_node_count",
+          "importance": 0.045331
+        },
+        {
+          "feature": "character_length",
+          "importance": 0.044623
+        },
+        {
+          "feature": "language_config",
+          "importance": 0.031139
+        },
+        {
+          "feature": "language_go",
+          "importance": 0.02743
+        },
+        {
+          "feature": "language_php",
+          "importance": 0.026481
+        },
+        {
+          "feature": "language_python",
+          "importance": 0.021227
+        },
+        {
+          "feature": "language_html",
+          "importance": 0.020564
+        },
+        {
+          "feature": "dependency_marker_count",
+          "importance": 0.017468
+        },
+        {
+          "feature": "import_count",
+          "importance": 0.016394
+        },
+        {
+          "feature": "byte_length",
+          "importance": 0.016147
+        },
+        {
+          "feature": "python_ast_call_count",
+          "importance": 0.015589
+        },
+        {
+          "feature": "network_api_count",
+          "importance": 0.01554
+        },
+        {
+          "feature": "network_sink_count",
+          "importance": 0.01527
+        },
+        {
+          "feature": "behavior_chain_count",
+          "importance": 0.014527
+        },
+        {
+          "feature": "language_java",
+          "importance": 0.013467
+        },
+        {
+          "feature": "function_definition_count",
+          "importance": 0.011426
+        }
+      ],
+      "limitations": [
+        "Synthetic evasion variants inherit the original sample split.",
+        "Metrics must be interpreted with the reported unique positive family count.",
+        "A language is unavailable unless both task classes meet the minimum in every split."
+      ],
+      "reason": null,
+      "language_routes": {
+        "java": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "project_or_package",
+          "deployment": {
+            "samples": 158,
+            "accuracy": 0.9304,
+            "precision": 0.9579,
+            "recall": 0.9286,
+            "f1": 0.943,
+            "pr_auc": 0.9837,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                56,
+                4
+              ],
+              [
+                7,
+                91
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 937,
+            "accuracy": 0.9189,
+            "precision": 0.7753,
+            "recall": 0.9283,
+            "f1": 0.8449,
+            "pr_auc": 0.9499,
+            "false_positive_rate": 0.084,
+            "false_negative_rate": 0.0717,
+            "quality_gate_passed": false,
+            "confusion_matrix": [
+              [
+                654,
+                60
+              ],
+              [
+                16,
+                207
+              ]
+            ]
+          },
+          "test": {
+            "samples": 1130,
+            "accuracy": 0.9115,
+            "precision": 0.8051,
+            "recall": 0.9019,
+            "f1": 0.8507,
+            "pr_auc": 0.9496,
+            "false_positive_rate": 0.0848,
+            "false_negative_rate": 0.0981,
+            "quality_gate_passed": false,
+            "confusion_matrix": [
+              [
+                745,
+                69
+              ],
+              [
+                31,
+                285
+              ]
+            ]
+          },
+          "family_validation": {
+            "samples": 113,
+            "accuracy": 0.9558,
+            "precision": 0.95,
+            "recall": 0.9661,
+            "f1": 0.958,
+            "pr_auc": 0.9924,
+            "false_positive_rate": 0.0556,
+            "false_negative_rate": 0.0339,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                51,
+                3
+              ],
+              [
+                2,
+                57
+              ]
+            ]
+          },
+          "family_test": {
+            "samples": 158,
+            "accuracy": 0.9304,
+            "precision": 0.9579,
+            "recall": 0.9286,
+            "f1": 0.943,
+            "pr_auc": 0.9837,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                56,
+                4
+              ],
+              [
+                7,
+                91
+              ]
+            ]
+          },
+          "quality_gate_passed": true,
+          "release_scope": "advisory_only_after_failed_source_heldout_evaluation",
+          "source_heldout_verified": false,
+          "evaluation_protocol": "source_heldout",
+          "source_heldout_report": {
+            "samples": 1000,
+            "accuracy": 0.496,
+            "precision": 0.4978,
+            "recall": 0.908,
+            "f1": 0.6431,
+            "pr_auc": 0.4926,
+            "false_positive_rate": 0.916,
+            "false_negative_rate": 0.092,
+            "quality_gate_passed": false,
+            "confusion_matrix": [
+              [
+                42,
+                458
+              ],
+              [
+                46,
+                454
+              ]
+            ]
+          }
+        },
+        "bash": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "c": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "config": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "cpp": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "csharp": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "go": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "html": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "javascript": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "kotlin": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "lua": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "perl": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "php": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "python": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "ruby": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "rust": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "scala": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "sql": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "typescript": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        },
+        "unknown": {
+          "artifact": "xgb_vulnerability_classifier.joblib",
+          "feature_mode": "hybrid_hash",
+          "thresholds": {
+            "decision": 0.2,
+            "uncertain_low": 0.1,
+            "uncertain_high": 0.25
+          },
+          "evaluation_scope": "file_runtime_fallback",
+          "deployment": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "validation": null,
+          "test": {
+            "samples": 158,
+            "precision": 0.9579,
+            "false_positive_rate": 0.0667,
+            "false_negative_rate": 0.0714,
+            "quality_gate_passed": false,
+            "evaluation_scope": "java_project_or_package_only",
+            "note": "Cross-language runtime fallback; no independent all-language gate is claimed."
+          },
+          "quality_gate_passed": false,
+          "source_heldout_verified": false,
+          "evaluation_protocol": "not_evaluated",
+          "release_scope": "runtime_fallback_unvalidated_for_this_language",
+          "task": "vulnerability_risk"
+        }
+      },
+      "deployment_by_language": {
+        "java": {
+          "samples": 158,
+          "accuracy": 0.9304,
+          "precision": 0.9579,
+          "recall": 0.9286,
+          "f1": 0.943,
+          "pr_auc": 0.9837,
+          "false_positive_rate": 0.0667,
+          "false_negative_rate": 0.0714,
+          "quality_gate_passed": true,
+          "confusion_matrix": [
+            [
+              56,
+              4
+            ],
+            [
+              7,
+              91
+            ]
+          ]
+        }
+      },
+      "release_scope": "strict routes where independently validated; all other recognized languages use an explicitly unvalidated fallback",
+      "strict_supported_languages": [],
+      "fallback_languages": [
+        "bash",
+        "c",
+        "config",
+        "cpp",
+        "csharp",
+        "go",
+        "html",
+        "java",
+        "javascript",
+        "kotlin",
+        "lua",
+        "perl",
+        "php",
+        "python",
+        "ruby",
+        "rust",
+        "scala",
+        "sql",
+        "typescript",
+        "unknown"
+      ]
+    }
+  },
+  "quality_gate": {
+    "requirements": {
+      "min_precision": 0.9,
+      "max_false_positive_rate": 0.1,
+      "max_false_negative_rate": 0.1
+    },
+    "passed": true,
+    "scope": "pooled strict malicious-intent routes and every newly promoted route",
+    "strict_routes": {
+      "malicious_intent": [
+        "bash",
+        "c",
+        "config",
+        "cpp",
+        "go",
+        "html",
+        "java",
+        "javascript",
+        "php",
+        "powershell",
+        "python",
+        "ruby",
+        "rust"
+      ]
+    },
+    "new_routes": [
+      "bash",
+      "c",
+      "config",
+      "cpp",
+      "go",
+      "html",
+      "java",
+      "javascript",
+      "php",
+      "powershell",
+      "python",
+      "ruby",
+      "rust"
+    ]
+  },
+  "active_routes": {
+    "malicious_intent": [
+      "bash",
+      "batch",
+      "c",
+      "config",
+      "cpp",
+      "csharp",
+      "go",
+      "html",
+      "java",
+      "javascript",
+      "kotlin",
+      "lua",
+      "perl",
+      "php",
+      "powershell",
+      "python",
+      "ruby",
+      "rust",
+      "scala",
+      "sql",
+      "typescript",
+      "unknown"
+    ],
+    "vulnerability_risk": [
+      "bash",
+      "c",
+      "config",
+      "cpp",
+      "csharp",
+      "go",
+      "html",
+      "java",
+      "javascript",
+      "kotlin",
+      "lua",
+      "perl",
+      "php",
+      "python",
+      "ruby",
+      "rust",
+      "scala",
+      "sql",
+      "typescript",
+      "unknown"
+    ]
+  },
+  "published": true
+}

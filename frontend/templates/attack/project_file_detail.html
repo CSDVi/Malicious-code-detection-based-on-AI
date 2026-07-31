@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}文件风险点 - 獬豸安码{% endblock %}
+{% block content %}
+<section class="result-header report-heading section-block">
+    <div><span class="eyebrow">项目文件检测详情</span><h2>{{ file_result.filename }}</h2></div>
+    <a class="secondary-action" href="{{ url_for('attack.project_scan', job_id=job_id) }}">返回项目结果</a>
+</section>
+
+<section class="grid-4 file-detail-metrics">
+    <article class="metric-card">
+        <div class="metric-label"><span>检测结论</span></div>
+        <div class="metric-value text-value">{{ file_result.final_decision|zh }}</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-label"><span>风险分</span></div>
+        <div class="metric-value">{{ file_result.risk_score }}</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-label"><span>实际检测模式</span></div>
+        <div class="metric-value text-value">{{ file_result.effective_mode|zh }}</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-label"><span>可定位风险点</span></div>
+        <div class="metric-value">{{ evidence_items|length }}</div>
+    </article>
+</section>
+
+<section class="table-panel motion-card section-block">
+    <div class="section-title compact-title"><h2>深度模型判断</h2></div>
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>模型</th><th>结论</th><th>文件恶意概率</th><th>判定阈值</th><th>模型版本</th></tr></thead>
+            <tbody>
+            {% for engine in model_results %}
+            <tr>
+                <td>{{ engine.name|zh }}</td>
+                <td>{{ engine.decision|zh }}</td>
+                <td>{{ (engine.probability * 100)|round(1) ~ '%' if engine.probability is not none else '未输出' }}</td>
+                <td>{{ (engine.threshold * 100)|round(1) ~ '%' if engine.threshold is not none else '未输出' }}</td>
+                <td>{{ engine.model_version or '未记录' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5"><div class="empty-state">本文件没有完成可展示的深度模型分析</div></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% set xai = file_result.ai_explainability %}
+<section class="panel motion-card section-block ai-explanation-panel">
+    <div class="section-title compact-title"><div><h2>AI判断与证据</h2></div></div>
+    <div class="ai-explanation-summary">
+        <div><span>CodeT5+ 220M语义判断</span>{% if xai.codet5p.available %}<strong>{{ (xai.codet5p.probability * 100)|round(1) }}%</strong><small>{{ xai.codet5p.decision|zh }} · 文件级判断</small>{% else %}<strong>未执行</strong>{% endif %}</div>
+        <div><span>XGBoost快速判断</span>{% if xai.xgboost.available %}<strong>{{ (xai.xgboost.probability * 100)|round(1) }}%</strong>{% else %}<strong>不可用</strong>{% endif %}</div>
+        <div><span>最终判定主导</span><strong>{% if xai.decision_authority in ('ai', 'ai_with_rule_vulnerability') %}AI主判{% elif xai.decision_authority == 'rule_fallback' %}规则回退{% else %}未决{% endif %}</strong><small>{% if xai.rule_fallback_used %}仅因AI不可用、不确定或冲突才启用规则{% else %}规则只解释风险行、原因与修复方式{% endif %}</small></div>
+    </div>
+</section>
+
+{% if file_result.categories %}
+<section class="panel motion-card section-block">
+    <div class="section-title compact-title"><div><h2>风险类别</h2></div></div>
+    <div class="tag-group">
+        {% for category in file_result.categories %}<span class="data-tag">{{ category|zh }}</span>{% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="evidence-section section-block">
+    <div class="section-title compact-title">
+        <h2>可疑代码行与代码块</h2>
+        <span class="evidence-count">{{ evidence_items|length }} 条</span>
+    </div>
+    <div class="evidence-list">
+        {% for evidence in evidence_items %}
+        <article class="evidence-item motion-card" id="evidence-{{ loop.index }}">
+            <header class="evidence-head">
+                <div>
+                    <strong>{% if evidence.line %}第 {{ evidence.line }} 行{% else %}文件级证据{% endif %}</strong>
+                    <span>{{ evidence.category|zh }}{% if evidence.rule_id %} · {{ evidence.rule_id }}{% endif %}{% if evidence.cwe %} · {{ evidence.cwe }}{% endif %}{% if evidence.owasp_category %} · {{ evidence.owasp_category }}{% endif %}{% if evidence.api_security_category %} · {{ evidence.api_security_category }}{% endif %}</span>
+                </div>
+                <div class="evidence-badges">
+                    <span class="basis-badge basis-{{ evidence.evidence_basis or 'rule_only' }}">{% if evidence.evidence_basis == 'ai_decision' %}AI主判{% elif evidence.evidence_basis == 'ai_and_rule' %}AI与规则一致{% elif evidence.evidence_basis == 'ai_only' %}AI重点关注{% else %}规则解释{% endif %}</span>
+                    {% if evidence.ai_attribution %}<span class="suspicion-badge">AI行贡献 {{ evidence.ai_attribution.contribution_percent }}%</span>{% else %}<span class="suspicion-badge">风险指数 {{ evidence.suspicion_score if evidence.suspicion_score is not none else '未评分' }}/100</span>{% endif %}
+                </div>
+            </header>
+            {% if evidence.code_context %}
+            <pre class="evidence-code">{% for row in evidence.code_context %}<span class="{% if row.is_target %}target-line{% endif %}"><b>{{ row.line }}</b><code>{{ row.code }}</code></span>{% endfor %}</pre>
+            {% elif evidence.snippet %}
+            <pre class="evidence-code"><span class="target-line"><b>{{ evidence.line or '—' }}</b><code>{{ evidence.snippet }}</code></span></pre>
+            {% endif %}
+            <div class="evidence-explanation-grid">
+                <div><strong>危害</strong><p>{{ evidence.harm or evidence.description }}</p>{% if evidence.risk_domains %}<small>风险范围：{{ evidence.risk_domains|join('、') }}</small>{% endif %}</div>
+                <div><strong>检测依据</strong><p>{{ evidence.basis_text or evidence.description }}</p>{% if evidence.ai_attribution %}<small>遮挡该行后，XGBoost恶意概率下降 {{ (evidence.ai_attribution.probability_drop * 100)|round(2) }} 个百分点。贡献度只解释模型判断，不是漏洞概率。</small>{% endif %}</div>
+                {% if evidence.repair_suggestions %}<div class="evidence-remediation"><strong>修复建议</strong><ol>{% for suggestion in evidence.repair_suggestions[:3] %}<li>{{ suggestion }}</li>{% endfor %}</ol></div>{% elif evidence.repair_advice %}<div class="evidence-remediation"><strong>修复建议</strong><p>{{ evidence.repair_advice }}</p></div>{% endif %}
+            </div>
+        </article>
+        {% else %}
+        <div class="empty-state evidence-empty">
+            <span>深度模型给出了文件级判断，但当前结果没有可定位到具体代码行的证据，需要结合业务上下文人工复核。</span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

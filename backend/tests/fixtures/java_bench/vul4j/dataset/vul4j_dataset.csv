@@ -1,0 +1,2 @@
+vul_id,cve_id,cwe_id,repo_slug,human_patch
+VUL4J-1,CVE-2026-1,CWE-79,acme/app,https://github.com/acme/app/commit/b

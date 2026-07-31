@@ -1,0 +1,358 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-07-29",
+  "description": "本地修复建议知识库。建议根据 OWASP、MITRE CWE 等官方资料重新表述，并按攻击类型与语言匹配。",
+  "sources": {
+    "owasp-top10-2025": {
+      "title": "OWASP Top 10:2025",
+      "url": "https://owasp.org/Top10/"
+    },
+    "owasp-secure-review": {
+      "title": "OWASP 安全代码审查指南",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html"
+    },
+    "owasp-sqli": {
+      "title": "OWASP SQL 注入防护指南",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+    },
+    "owasp-xss": {
+      "title": "OWASP XSS 防护指南",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html"
+    },
+    "owasp-command": {
+      "title": "OWASP 操作系统命令注入防护指南",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html"
+    },
+    "owasp-ssrf": {
+      "title": "OWASP SSRF 防护指南",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"
+    },
+    "owasp-deserialization": {
+      "title": "OWASP 反序列化安全指南",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html"
+    },
+    "owasp-secrets": {
+      "title": "OWASP 密钥管理指南",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
+    },
+    "owasp-supply-chain": {
+      "title": "OWASP 软件供应链安全指南",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html"
+    },
+    "cwe-22": {
+      "title": "MITRE CWE-22 路径穿越",
+      "url": "https://cwe.mitre.org/data/definitions/22.html"
+    },
+    "cwe-79": {
+      "title": "MITRE CWE-79 跨站脚本",
+      "url": "https://cwe.mitre.org/data/definitions/79.html"
+    },
+    "cwe-89": {
+      "title": "MITRE CWE-89 SQL 注入",
+      "url": "https://cwe.mitre.org/data/definitions/89.html"
+    },
+    "cwe-94": {
+      "title": "MITRE CWE-94 代码注入",
+      "url": "https://cwe.mitre.org/data/definitions/94.html"
+    },
+    "cwe-494": {
+      "title": "MITRE CWE-494 未验证下载代码",
+      "url": "https://cwe.mitre.org/data/definitions/494.html"
+    },
+    "cwe-502": {
+      "title": "MITRE CWE-502 不可信数据反序列化",
+      "url": "https://cwe.mitre.org/data/definitions/502.html"
+    },
+    "cwe-522": {
+      "title": "MITRE CWE-522 凭据保护不足",
+      "url": "https://cwe.mitre.org/data/definitions/522.html"
+    },
+    "cwe-798": {
+      "title": "MITRE CWE-798 硬编码凭据",
+      "url": "https://cwe.mitre.org/data/definitions/798.html"
+    }
+  },
+  "entries": {
+    "SQL Injection": {
+      "cwe": "CWE-89",
+      "owasp": "A05:2025 注入",
+      "source_ids": ["owasp-top10-2025", "owasp-sqli", "cwe-89"],
+      "suggestions": [
+        "把所有外部输入作为参数绑定到预编译语句，不要通过拼接、格式化或模板插值生成 SQL。",
+        "表名、列名和排序方向不能使用参数绑定时，应从固定白名单映射业务值，禁止直接采用请求参数。",
+        "为应用数据库账户配置最小权限，按读写职责拆分账户，禁止日常业务连接使用管理员权限。",
+        "数据库错误返回统一业务提示，详细 SQL、表结构和驱动异常仅写入受控日志。",
+        "为命中的输入源到数据库执行点补充回归测试，至少覆盖引号、注释符、布尔条件和延时函数等边界输入。"
+      ],
+      "language_suggestions": {
+        "python": [
+          "Python DB-API 使用 execute(sql, params) 占位符或 ORM 参数绑定，禁止用 f-string、百分号或加号拼接查询。",
+          "SQLAlchemy 使用 bindparam、text 参数或表达式 API；审查 raw SQL 和 execute(text(...)) 的输入来源。"
+        ],
+        "java": [
+          "Java 使用 PreparedStatement 或 JPA 命名参数，并逐项调用类型明确的 setString、setInt 等绑定方法。",
+          "禁止把 getParameter、请求头或 Cookie 值拼入 JDBC、Hibernate 或 MyBatis 的原始 SQL；MyBatis 优先使用井号参数绑定。"
+        ],
+        "javascript": [
+          "Node.js 数据库驱动使用占位符和参数数组，查询构造器使用参数 API，禁止模板字符串拼接 req.query、req.body 或 req.params。",
+          "审查 ORM 的 raw、literal、whereRaw 等逃生接口，它们必须继续使用参数绑定。"
+        ],
+        "php": [
+          "PHP 使用 PDO::prepare/execute 或 mysqli_prepare，并关闭不必要的模拟预处理。",
+          "不要把 $_GET、$_POST 或 $_REQUEST 值拼入查询；动态标识符必须经过固定映射表。"
+        ],
+        "go": [
+          "Go database/sql 使用 Query、Exec、QueryRow 的占位参数，禁止 fmt.Sprintf 或字符串相加构造包含请求值的 SQL。",
+          "使用查询构造器时仍需确认最终生成语句采用驱动参数，而不是把 FormValue 或 URL 参数插入 SQL 文本。"
+        ]
+      }
+    },
+    "XSS": {
+      "cwe": "CWE-79",
+      "owasp": "A05:2025 注入",
+      "source_ids": ["owasp-top10-2025", "owasp-xss", "cwe-79"],
+      "suggestions": [
+        "根据 HTML正文、属性、JavaScript、CSS 和 URL 的具体输出上下文分别编码，不能用一种转义覆盖所有位置。",
+        "只显示文本时使用 textContent 等安全接收点，避免 innerHTML、document.write 和动态脚本执行接口。",
+        "业务确需接受 HTML 时使用维护良好的净化库并配置允许标签和属性，禁止自制正则清洗器。",
+        "将内容安全策略作为纵深防御，同时保留上下文编码和 HTML 净化，不能只依赖 CSP。",
+        "对会话 Cookie 设置 HttpOnly、Secure 和合适的 SameSite 属性以降低成功利用后的影响。"
+      ],
+      "language_suggestions": {
+        "javascript": [
+          "前端框架中避免绕过自动转义；React 的 dangerouslySetInnerHTML、Vue 的 v-html 等接口只接收经过净化的可信内容。",
+          "构造链接时校验协议并限制为 http、https 等业务允许值，拒绝 javascript 等可执行协议。"
+        ],
+        "java": [
+          "Java 服务端模板保持自动转义开启；输出到脚本、属性或 URL 时使用对应上下文的编码器。"
+        ],
+        "php": [
+          "PHP 输出普通文本时使用带明确编码的 htmlspecialchars；富文本使用专用净化库，不要依赖 strip_tags 作为完整防护。"
+        ]
+      }
+    },
+    "Command Execution": {
+      "cwe": "CWE-78",
+      "owasp": "A05:2025 注入",
+      "source_ids": ["owasp-top10-2025", "owasp-command", "owasp-secure-review"],
+      "suggestions": [
+        "优先改用文件、网络或压缩等专用库完成任务，避免启动操作系统命令。",
+        "必须启动进程时固定可执行文件，使用参数数组传值，不经过 Shell 解析整段字符串。",
+        "命令和参数分别采用允许列表校验，并限制长度、字符集和取值范围；拒绝额外选项和重定向符。",
+        "以无特权账户运行子进程，限制工作目录、环境变量、文件权限、网络访问和执行超时。",
+        "记录命令模板、参数校验结果和退出状态，但对日志中的令牌、口令与个人信息进行脱敏。"
+      ],
+      "language_suggestions": {
+        "python": [
+          "Python subprocess 使用列表参数并保持 shell=False，禁止将请求数据送入 os.system、eval 或 shell=True。"
+        ],
+        "java": [
+          "Java ProcessBuilder 将程序和每个参数分别传入，并从固定映射选择可执行文件。"
+        ],
+        "javascript": [
+          "Node.js 优先使用 execFile 或 spawn 的参数数组，避免 child_process.exec 拼接命令字符串。"
+        ],
+        "php": [
+          "PHP 应避免 shell_exec、system、passthru；确实无法替代时固定命令并对单个参数做严格允许列表校验。"
+        ],
+        "go": [
+          "Go 使用 exec.Command(name, args...) 且 name 来自固定映射，禁止通过 sh -c 执行拼接内容。"
+        ]
+      }
+    },
+    "SSRF": {
+      "cwe": "CWE-918",
+      "owasp": "A01:2025 访问控制失效",
+      "source_ids": ["owasp-top10-2025", "owasp-ssrf", "owasp-secure-review"],
+      "suggestions": [
+        "业务目标固定时使用协议、域名、端口和路径允许列表，不允许用户提交完整目标 URL。",
+        "解析主机名后校验所有 IPv4 和 IPv6 地址，拒绝回环、私网、链路本地、保留地址和云元数据网段。",
+        "关闭自动跟随重定向，或对每一次重定向后的目标重新执行协议、域名和地址校验。",
+        "统一使用经过审查的 URL 解析库，规范化大小写、编码和混合进制地址后再做策略判断。",
+        "通过出站防火墙、代理或服务网格限制应用可访问的网络范围，避免只依赖代码校验。",
+        "设置较短的连接、读取和总请求超时，并限制响应大小与允许的内容类型。"
+      ],
+      "language_suggestions": {
+        "python": [
+          "Python requests 调用设置 allow_redirects=False，并在请求前后使用 ipaddress 校验解析出的全部地址。"
+        ],
+        "java": [
+          "Java 在创建 HTTP 请求前使用 URI 解析并校验 InetAddress 结果，禁止信任仅做字符串前缀判断的 URL。"
+        ],
+        "javascript": [
+          "Node.js 对 DNS lookup 返回的所有地址执行网段校验，并限制自定义 Agent、代理和重定向行为。"
+        ],
+        "go": [
+          "Go 为 http.Client 配置受控 Transport、CheckRedirect 和超时，并在 DialContext 前校验解析地址。"
+        ]
+      }
+    },
+    "Path Traversal": {
+      "cwe": "CWE-22",
+      "owasp": "A01:2025 访问控制失效",
+      "source_ids": ["owasp-top10-2025", "cwe-22", "owasp-secure-review"],
+      "suggestions": [
+        "不要让用户直接提供服务器文件路径，优先使用业务标识符映射到固定文件。",
+        "在固定根目录下拼接并规范化路径，然后验证最终真实路径仍位于允许根目录内。",
+        "拒绝绝对路径、父目录跳转、设备路径、空字节以及经过多次编码后出现的路径分隔符。",
+        "打开文件时使用最小权限账户，并将上传、临时和敏感配置目录相互隔离。",
+        "对符号链接、大小写差异和检查后替换等竞态情况使用安全文件 API 或目录句柄约束。"
+      ],
+      "language_suggestions": {
+        "python": [
+          "Python 使用 pathlib.Path.resolve 后通过 relative_to 校验根目录关系，不要只判断字符串是否以根目录开头。"
+        ],
+        "java": [
+          "Java 使用 Path.normalize、toRealPath 和 startsWith 校验根路径，并注意符号链接解析。"
+        ],
+        "javascript": [
+          "Node.js 使用 path.resolve 后比较规范化路径边界，确保根目录比较包含路径分隔符语义。"
+        ],
+        "php": [
+          "PHP 使用 realpath 获取真实路径并核对允许根目录，文件名优先从服务端映射表选择。"
+        ],
+        "go": [
+          "Go 使用 filepath.Clean、Abs、Rel 核对目标未越出根目录，并避免跟随不受信任的符号链接。"
+        ]
+      }
+    },
+    "Unsafe Deserialization": {
+      "cwe": "CWE-502",
+      "owasp": "A08:2025 软件或数据完整性失效",
+      "source_ids": ["owasp-top10-2025", "owasp-deserialization", "cwe-502"],
+      "suggestions": [
+        "优先改用 JSON 等不携带可执行对象图的简单格式，并对字段类型、范围和数量做模式校验。",
+        "禁止反序列化来自请求、消息队列、缓存或文件上传的未认证对象数据。",
+        "确实需要对象反序列化时采用严格类型允许列表，禁用多态类型自动解析和任意类加载。",
+        "对序列化数据进行来源认证和完整性校验，但不能把签名当作允许危险类型实例化的理由。",
+        "将反序列化过程放入低权限、隔离且无外网的进程，并限制对象深度、大小和执行时间。"
+      ],
+      "language_suggestions": {
+        "python": [
+          "Python 不要对不可信数据使用 pickle、marshal 或不安全的 yaml.load；YAML 使用 safe_load 并限制结构大小。"
+        ],
+        "java": [
+          "Java 避免 ObjectInputStream 处理外部数据；无法替代时使用对象输入过滤器并维护最小类允许列表。"
+        ],
+        "php": [
+          "PHP 避免对外部输入调用 unserialize；无法替代时设置 allowed_classes 并排除具有魔术方法副作用的类。"
+        ]
+      }
+    },
+    "Secret Exposure": {
+      "cwe": "CWE-798",
+      "owasp": "A04:2025 加密机制失效",
+      "source_ids": ["owasp-top10-2025", "owasp-secrets", "cwe-798"],
+      "suggestions": [
+        "立即撤销并轮换已经提交到代码、镜像、日志或制品中的密钥，删除文本本身不能消除泄露影响。",
+        "将密钥迁移到专用密钥管理服务或受保护的部署环境注入机制，禁止写入源码和默认配置。",
+        "为每个环境、服务和用途使用独立凭据，设置最小权限、有效期和自动轮换策略。",
+        "在提交、持续集成、制品构建和发布环节启用密钥扫描，并阻止已确认密钥继续流转。",
+        "审计密钥使用日志和异常访问，确认泄露时间范围及可能受影响的系统。"
+      ]
+    },
+    "WebShell": {
+      "cwe": "CWE-94",
+      "source_ids": ["cwe-94", "owasp-secure-review"],
+      "suggestions": [
+        "删除把请求参数送入 eval、assert、system、exec 或动态函数构造器的入口。",
+        "立即隔离受影响文件和主机，保留样本、文件时间线、访问日志与进程信息用于调查。",
+        "检查同目录上传文件、计划任务、启动项、Web服务器配置和相邻账号是否存在持续化后门。",
+        "轮换可能被读取的数据库、云平台、部署和管理员凭据，并核对异常登录和出站连接。",
+        "修复最初的上传、依赖或权限入口，限制 Web 进程写入代码目录并关闭非必要执行权限。"
+      ]
+    },
+    "Download or Remote Load": {
+      "cwe": "CWE-494",
+      "owasp": "A03:2025 软件供应链失效",
+      "source_ids": ["owasp-top10-2025", "owasp-supply-chain", "cwe-494"],
+      "suggestions": [
+        "将下载源限制为固定的 HTTPS 域名和路径，禁止从请求参数直接决定远程地址。",
+        "下载后在使用前校验发布者签名和固定版本哈希，校验失败必须阻断而不是只记录日志。",
+        "限制响应大小、类型、重定向次数和超时，保存文件时使用不可执行的隔离目录。",
+        "依赖和工具下载采用锁定版本及可信镜像，记录来源、版本、摘要和构建过程以便追溯。",
+        "不要在安装或请求处理流程中直接加载远程脚本、模板、动态库或解释器代码。"
+      ]
+    },
+    "Download and Execute": {
+      "cwe": "CWE-494",
+      "owasp": "A03:2025 软件供应链失效",
+      "source_ids": ["owasp-top10-2025", "owasp-supply-chain", "cwe-494"],
+      "suggestions": [
+        "彻底分离下载、验证和执行阶段，任何验证失败或来源不明的文件都不得进入执行路径。",
+        "只允许运行固定发布者签名且摘要匹配的制品，版本和签名信任根应由本地策略管理。",
+        "下载目录默认不可执行，执行进程使用最小权限并限制网络、文件系统和子进程能力。",
+        "禁止 curl、wget、PowerShell 下载命令与 shell、chmod、Start-Process 等执行操作直接串联。",
+        "记录制品来源、重定向链、摘要、签名、启动参数和结果，并为异常执行配置告警。"
+      ]
+    },
+    "Obfuscated Payload": {
+      "cwe": "CWE-506",
+      "source_ids": ["owasp-secure-review"],
+      "suggestions": [
+        "解码并保存完整载荷供人工审查，确认编码、压缩或字符拼接是否具有必要业务用途。",
+        "移除无业务必要的多层 Base64、十六进制、字符码拼接、动态属性访问和运行时解密。",
+        "重点检查解码结果是否进入 eval、Function、shell、文件写入、网络发送或持久化接口。",
+        "对确有需求的压缩和加密数据记录格式、来源、完整性校验与调用边界，避免与可执行路径混合。",
+        "在隔离环境中分析未知载荷，不要在开发机或生产环境直接执行解码后的内容。"
+      ]
+    },
+    "Install Hook Execution": {
+      "cwe": "CWE-506",
+      "owasp": "A03:2025 软件供应链失效",
+      "source_ids": ["owasp-top10-2025", "owasp-supply-chain"],
+      "suggestions": [
+        "删除安装阶段非必要的网络下载、解释器启动和系统命令；构建产物应在发布前生成。",
+        "锁定依赖版本与摘要，核对包名相似项、维护者变更、发布脚本和新增安装钩子。",
+        "持续集成安装依赖时禁用非必要生命周期脚本，并在无凭据、低权限、隔离网络环境运行。",
+        "对发布包与源码仓库执行差异检查，确认压缩包中不存在未审查脚本和额外二进制。",
+        "发生异常后撤销发布令牌、轮换构建凭据，并检查受影响版本的下载和部署范围。"
+      ]
+    },
+    "Credential Exfiltration": {
+      "cwe": "CWE-522",
+      "source_ids": ["owasp-secrets", "cwe-522"],
+      "suggestions": [
+        "立即阻断并删除凭据外传路径，隔离相关主机和软件包，保留网络与进程证据。",
+        "撤销并轮换可能被读取的令牌、Cookie、SSH密钥、云凭据和包仓库发布密钥。",
+        "限制进程读取环境变量、用户配置、浏览器数据和密钥目录，并采用最小权限服务账户。",
+        "对 Webhook、即时通信接口和未知域名的出站请求配置代理策略、审计和告警。",
+        "追查恶意代码的引入提交、依赖版本、构建制品和部署范围，通知受影响使用方。"
+      ]
+    },
+    "Credential Collection": {
+      "cwe": "CWE-522",
+      "source_ids": ["owasp-secrets", "cwe-522"],
+      "suggestions": [
+        "删除非必要的环境变量、浏览器存储、SSH目录、包管理配置和系统凭据读取行为。",
+        "将确需读取的凭据改为短期、按需获取，并限制到具体服务、资源和操作。",
+        "隔离凭据读取模块与网络发送、文件写入和子进程执行能力，避免形成外传链。",
+        "记录敏感数据访问主体、用途和时间，对批量读取、跨用户访问和异常频率配置告警。",
+        "轮换已可能被收集的凭据，并检查其后续使用记录和权限变更。"
+      ]
+    },
+    "Persistence": {
+      "cwe": "CWE-506",
+      "source_ids": ["owasp-secure-review"],
+      "suggestions": [
+        "删除未经授权的计划任务、启动项、服务、登录脚本、浏览器扩展和 SSH 授权项。",
+        "核对创建持久化项的进程树、账号、文件摘要、首次出现时间和相关网络连接。",
+        "限制应用写入系统启动目录、注册表启动键、服务配置和用户授权文件。",
+        "对新增或变更的自动启动机制实施基线比对、签名校验和实时告警。",
+        "完成清理后轮换受影响账号凭据并重新检查主机，确认不存在备用持久化路径。"
+      ]
+    },
+    "Remote Load or Write": {
+      "cwe": "CWE-494",
+      "owasp": "A03:2025 软件供应链失效",
+      "source_ids": ["owasp-supply-chain", "cwe-494"],
+      "suggestions": [
+        "确认远程内容来源、业务用途和预期落盘位置，禁止用户输入同时控制来源和目标路径。",
+        "写入前验证签名、摘要、大小和类型，目标目录应不可执行且与应用代码分离。",
+        "使用随机临时文件和原子移动，避免覆盖现有配置、脚本、密钥或可执行文件。",
+        "限制下载进程的文件系统和网络权限，并为远程写入行为保留审计记录。",
+        "若文件随后会被解析、加载或执行，应在该步骤前再次进行格式校验和安全扫描。"
+      ]
+    }
+  }
+}

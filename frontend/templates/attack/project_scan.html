@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}项目扫描{% endblock %}
+{% block page_label %}压缩包扫描{% endblock %}
+{% block content %}
+<section class="page-hero">
+    <div><span class="eyebrow">项目级分析</span><h1>静态扫描 ZIP 项目</h1><p>后端只读取允许的源代码文件，跳过可疑路径和超大文件，不会执行项目代码。</p></div>
+</section>
+
+<section class="command-panel motion-card">
+    <form method="post" enctype="multipart/form-data" data-project-scan-form>
+        <div class="upload-zone">
+            <div><h2>选择 ZIP 压缩包</h2><p class="metric-sub" data-file-label>尚未选择文件</p></div>
+            <select name="mode" class="secondary-action" aria-label="检测模式">
+                <option value="auto">自动模式（AI不确定时才升级）</option>
+                <option value="quick">快速模式（仅XGBoost）</option>
+                <option value="standard">标准模式（语义复核 + AI行级归因）</option>
+                <option value="deep">深度模式（标准模式 + 项目图）</option>
+            </select>
+            <input type="file" name="project_zip" accept=".zip" data-max-bytes="1073741824" required>
+            <button class="primary-action" type="submit">扫描项目</button>
+        </div>
+    </form>
+</section>
+
+{% if job_id %}
+<section class="alert-panel motion-card" style="margin-top:14px" data-job-id="{{ job_id }}">
+    <div>项目检测任务 {{ job_id }} 正在以{{ mode|zh }}模式运行，请稍候，页面会自动更新状态。</div>
+</section>
+{% endif %}
+
+{% if result %}
+{% if result.warnings %}<section class="alert-panel motion-card" style="margin-top:14px">{% for item in result.warnings %}<div>{{ item }}</div>{% endfor %}</section>{% endif %}
+
+<section class="grid-4" style="margin-top:14px">
+    <article class="metric-card"><div class="metric-label"><span>已扫描文件</span></div><div class="metric-value" data-count="{{ result.file_count }}">{{ result.file_count }}</div><div class="metric-sub">通过检查的源代码文件</div></article>
+    <article class="metric-card"><div class="metric-label"><span>平均风险分</span></div><div class="metric-value" data-count="{{ result.average_score }}">{{ result.average_score }}</div><div class="metric-sub">项目文件平均值</div></article>
+    <article class="metric-card"><div class="metric-label"><span>最高风险分</span></div><div class="metric-value" data-count="{{ result.max_score }}">{{ result.max_score }}</div><div class="metric-sub">最高风险文件</div></article>
+    <article class="metric-card"><div class="metric-label"><span>项目风险</span></div><div class="metric-value"><span class="risk-badge" data-risk-level="{{ result.risk_level }}">{{ result.risk_level|zh }}</span></div><div class="metric-sub">依据平均值和最高值计算</div></article>
+</section>
+
+<section class="grid-3" style="margin-top:14px">
+    <article class="panel motion-card"><h3>最终判断</h3><ul class="reason-list">{% for key,value in result.decision_counts.items() %}<li>{{ key|zh }}：{{ value }}</li>{% else %}<li>暂无</li>{% endfor %}</ul></article>
+    <article class="panel motion-card"><h3>风险类别</h3><ul class="reason-list">{% for key,value in result.category_counts.items() %}<li>{{ key|zh }}：{{ value }}</li>{% else %}<li>暂无</li>{% endfor %}</ul></article>
+    <article class="panel motion-card"><h3>语言分布</h3><ul class="reason-list">{% for key,value in result.language_counts.items() %}<li>{{ key|zh }}：{{ value }}</li>{% else %}<li>暂无</li>{% endfor %}</ul></article>
+</section>
+
+<section class="table-panel motion-card" style="margin-top:14px" data-paginated-table data-page-size="10">
+    <div class="section-title" style="margin-top:0"><div><h2>高风险文件</h2><p>按照后端风险分从高到低显示全部文件，每页 10 项。</p></div></div>
+    <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>文件</th><th>判断</th><th>风险</th><th>恶意概率</th><th>类别</th><th>证据数</th></tr></thead>
+        <tbody>
+        {% for item in result.high_risk_files %}
+        <tr data-page-row><td>{{ item.filename }}</td><td>{{ item.final_decision|zh }}</td><td><span class="risk-badge" data-risk-level="{{ item.risk_level }}">{{ item.risk_level|zh }} / {{ item.risk_score }}</span></td><td>{{ item.malicious_intent.probability if item.malicious_intent.available else "不可用" }}</td><td>{% for category in item.categories %}{{ category|zh }}{% if not loop.last %}、{% endif %}{% endfor %}</td><td>{{ item.evidence_lines|length }}</td></tr>
+        {% else %}<tr><td colspan="6"><div class="empty-state">未发现可读取的源代码文件</div></td></tr>{% endfor %}
+        </tbody>
+    </table></div>
+    <nav class="table-pagination" data-table-pagination hidden aria-label="高风险文件分页"><button class="secondary-action compact-button" type="button" data-page-prev>上一页</button><span data-page-status aria-live="polite"></span><button class="secondary-action compact-button" type="button" data-page-next>下一页</button></nav>
+</section>
+{% endif %}
+{% endblock %}

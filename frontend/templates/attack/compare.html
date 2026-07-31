@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}检测对比 - 獬豸安码{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><span class="eyebrow">检测记录对比</span><h1>两次检测对比</h1><p>对比记录 #{{ left.id }} 与 #{{ right.id }}{% if left.file_hash == right.file_hash %}，两次检测的文件哈希一致{% else %}，这是两条明确选择的不同文件记录{% endif %}。</p></div>
+    <a class="secondary-action" href="{{ url_for('attack.history') }}">返回历史</a>
+</section>
+
+<section class="comparison-grid">
+    {% for record in [left, right] %}
+    <article class="comparison-head risk-surface-{{ record.risk_level }}">
+        <span>记录 #{{ record.id }}</span>
+        <h2>{{ record.filename }}</h2>
+        <strong>{{ record.final_decision|zh }}</strong>
+        <small>{{ record.risk_level|zh }} / 风险分 {{ record.risk_score }} / {{ record.created_at[:16]|replace('T',' ') }}</small>
+        <a class="text-link" href="{{ url_for('attack.record', record_id=record.id) }}">打开完整报告</a>
+    </article>
+    {% endfor %}
+</section>
+
+<section class="table-panel motion-card section-block">
+    <table class="data-table comparison-table">
+        <thead><tr><th>字段</th><th>#{{ left.id }}</th><th>#{{ right.id }}</th></tr></thead>
+        <tbody>
+            <tr><th>SHA-256</th><td><code>{{ left.file_hash }}</code></td><td><code>{{ right.file_hash }}</code></td></tr>
+            <tr><th>语言</th><td>{{ left.display_language|zh }}</td><td>{{ right.display_language|zh }}</td></tr>
+            <tr><th>选择 / 实际模式</th><td>{{ (left.selected_mode or '未记录')|zh }} / {{ (left.effective_mode or '未记录')|zh }}</td><td>{{ (right.selected_mode or '未记录')|zh }} / {{ (right.effective_mode or '未记录')|zh }}</td></tr>
+            <tr><th>恶意代码概率</th><td>{{ left.malicious_probability if left.malicious_probability is not none else '未产生' }}</td><td>{{ right.malicious_probability if right.malicious_probability is not none else '未产生' }}</td></tr>
+            <tr><th>规则证据</th><td>{{ left.rule_matches|length }} 条</td><td>{{ right.rule_matches|length }} 条</td></tr>
+            <tr><th>行为类别</th><td>{% for category in left.categories %}{{ category|zh }}{% if not loop.last %}、{% endif %}{% else %}暂无{% endfor %}</td><td>{% for category in right.categories %}{{ category|zh }}{% if not loop.last %}、{% endif %}{% else %}暂无{% endfor %}</td></tr>
+            <tr><th>ATT&amp;CK</th><td>{% for item in left.attack_techniques %}{{ item.id }}{% if not loop.last %}、{% endif %}{% else %}暂无{% endfor %}</td><td>{% for item in right.attack_techniques %}{{ item.id }}{% if not loop.last %}、{% endif %}{% else %}暂无{% endfor %}</td></tr>
+            <tr><th>模型版本</th><td>{{ left.model_version or '未记录' }}</td><td>{{ right.model_version or '未记录' }}</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<section class="grid-2 section-block">
+    {% for title, record in [('记录 #' ~ left.id ~ ' 引擎状态', left), ('记录 #' ~ right.id ~ ' 引擎状态', right)] %}
+<article class="panel motion-card"><h3>{{ title }}</h3><div class="engine-run-list compact-runs"><div class="engine-run engine-run-header"><strong class="engine-run-header-name">引擎名称</strong><span>执行状态</span><span title="取值为 0～1">恶意概率（0～1）</span></div>{% for engine in record.engines if engine.name in ('rule_engine', 'xgboost_malicious', 'xgboost_project_malicious', 'codet5p', 'gatv2', 'static_evidence', 'pe_static', 'hash_reputation', 'isolated_sandbox') and engine.status == 'completed' %}<div class="engine-run"><span class="status-dot status-{{ engine.status }}"></span><strong>{{ engine.name|zh }}</strong><span>{{ engine.status|zh }}</span><span>{{ engine.probability if engine.probability is not none else '未产生概率' }}</span></div>{% else %}<div class="empty-state">该历史记录没有保存已完成的模型组件</div>{% endfor %}</div></article>
+    {% endfor %}
+</section>
+{% endblock %}

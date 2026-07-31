@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}模型评测{% endblock %}
+{% block page_label %}模型评测{% endblock %}
+{% block content %}
+<section class="page-hero">
+    <div><span class="eyebrow">真实评测结果</span><h1>当前启用模型评测</h1><p>以下数值均来自当前模型注册表和不可变数据集清单，不生成模拟指标。</p></div>
+</section>
+
+{% if metrics %}
+<section class="grid-4">
+    <article class="metric-card"><div class="metric-label"><span>模型版本</span></div><div class="metric-value" style="font-size:18px">{{ metrics.model_version }}</div><div class="metric-sub">{{ "当前已启用" if registry.active_version == metrics.model_version else "当前未启用" }}</div></article>
+    <article class="metric-card"><div class="metric-label"><span>样本总数</span></div><div class="metric-value" data-count="{{ metrics.samples }}">{{ metrics.samples }}</div><div class="metric-sub">数据集 {{ metrics.dataset_sha256[:12] }}...</div></article>
+    <article class="metric-card"><div class="metric-label"><span>恶意样本</span></div><div class="metric-value" data-count="{{ metrics.label_counts.malicious }}">{{ metrics.label_counts.malicious }}</div><div class="metric-sub">正常样本 {{ metrics.label_counts.benign }}</div></article>
+    <article class="metric-card"><div class="metric-label"><span>正常样本</span></div><div class="metric-value" data-count="{{ metrics.label_counts.benign }}">{{ metrics.label_counts.benign }}</div><div class="metric-sub">与恶意样本配对评测</div></article>
+</section>
+
+<section class="table-panel motion-card" style="margin-top:14px">
+    <div class="section-title" style="margin-top:0"><div><h2>固定数据分区</h2><p>分区在训练前确定；NIST PHP 保留为跨来源测试数据。</p></div></div>
+    <table class="data-table"><thead><tr><th>训练集</th><th>验证集</th><th>测试集</th><th>数据集 SHA256</th></tr></thead><tbody><tr><td>{{ metrics.split_counts.train }}</td><td>{{ metrics.split_counts.validation }}</td><td>{{ metrics.split_counts.test }}</td><td><code>{{ metrics.dataset_sha256 }}</code></td></tr></tbody></table>
+</section>
+
+{% for task_name, task in metrics.tasks.items() %}
+<section class="table-panel motion-card" style="margin-top:14px">
+        <div class="section-title" style="margin-top:0"><div><h2>{{ task_name|zh }}</h2><p>{% if task.ready %}已注册模型评测 / Sigmoid（S 形函数）概率校准{% else %}{{ task.reason|zh }}{% endif %}</p></div></div>
+    {% if task.ready %}
+    <table class="data-table">
+        <thead><tr><th>评测范围</th><th>精确率</th><th>召回率</th><th>F1</th><th>PR-AUC</th><th>误报率</th><th>漏报率</th><th>阈值</th></tr></thead>
+        <tbody>
+            <tr><td>部署语言：{% for language in task.supported_languages %}{{ language|zh }}{% if not loop.last %}、{% endif %}{% endfor %}</td><td>{{ task.deployment.precision }}</td><td>{{ task.deployment.recall }}</td><td>{{ task.deployment.f1 }}</td><td>{{ task.deployment.pr_auc }}</td><td>{{ task.deployment.false_positive_rate }}</td><td>{{ task.deployment.false_negative_rate }}</td><td>{{ task.thresholds.decision }}</td></tr>
+            <tr><td>全语言压力测试</td><td>{{ task.precision }}</td><td>{{ task.recall }}</td><td>{{ task.f1 }}</td><td>{{ task.pr_auc }}</td><td>{{ task.false_positive_rate }}</td><td>{{ task.false_negative_rate }}</td><td>{{ task.unsupported_test_samples }} 条不支持语言样本</td></tr>
+        </tbody>
+    </table>
+    <table class="data-table" style="max-width:560px; margin-top:14px">
+        <tr><th>实际值 / 预测值</th>{% for label in task.labels %}<th>{{ label|zh }}</th>{% endfor %}</tr>
+        {% for row in task.confusion_matrix %}<tr><th>{{ task.labels[loop.index0]|zh }}</th>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}
+    </table>
+    <div class="section-title"><div><h3>跨来源测试</h3><p>单一类别的小组只展示可计算的误报率或召回率，不补造其他指标。</p></div></div>
+    <div class="table-scroll"><table class="data-table"><thead><tr><th>数据来源</th><th>样本数</th><th>精确率</th><th>召回率</th><th>F1</th><th>误报率</th><th>指标状态</th></tr></thead><tbody>
+        {% for source, report in task.by_source.items() %}<tr><td>{{ source|zh }}</td><td>{{ report.samples }}</td><td>{{ report.precision if report.precision is defined else "不适用" }}</td><td>{{ report.recall if report.recall is defined and report.recall is not none else "不适用" }}</td><td>{{ report.f1 if report.f1 is defined else "不适用" }}</td><td>{{ report.false_positive_rate if report.false_positive_rate is defined else "不适用" }}</td><td>{{ "仅类别条件指标" if report.insufficient_for_full_metrics else "完整指标" }}</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<div class="empty-state">{{ task.reason|zh }}</div>{% endif %}
+</section>
+{% endfor %}
+{% else %}
+<section class="panel motion-card">当前没有可用的模型评测结果。</section>
+{% endif %}
+{% endblock %}
