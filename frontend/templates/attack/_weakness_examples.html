@@ -1,0 +1,15 @@
+<div class="weakness-examples">
+    <div class="weakness-examples-head">
+        <strong>典型例子</strong>
+        {% if evidence.cwe %}<a href="https://cwe.mitre.org/data/definitions/{{ evidence.cwe|replace('CWE-', '') }}.html" target="_blank" rel="noopener noreferrer">{{ evidence.cwe }}</a>{% endif %}
+    </div>
+    {% if evidence.cve_examples %}
+    <div class="cve-example-list">
+        {% for example in evidence.cve_examples %}
+        <a href="{{ example.url }}" target="_blank" rel="noopener noreferrer"><b>{{ example.id }}</b><span>{{ example.title }}</span><small>{{ example.summary }}</small></a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>暂无可核实的典型例子。</p>
+    {% endif %}
+</div>

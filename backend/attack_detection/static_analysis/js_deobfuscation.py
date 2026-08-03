@@ -15,7 +15,6 @@ from .strings_ioc import decode_literal_candidates
 
 _CHAR_CODE_RE = re.compile(r"String\.fromCharCode\(([^)]{1,2000})\)", re.IGNORECASE)
 _ATOB_RE = re.compile(r"(?:atob|Buffer\.from)\(\s*(['\"])([A-Za-z0-9+/=]{8,})\1(?:\s*,\s*['\"]base64['\"])?\s*\)", re.IGNORECASE)
-_ESCAPE_RE = re.compile(r"\\x([0-9a-fA-F]{2})|\\u([0-9a-fA-F]{4})")
 _DANGEROUS = (
     (re.compile(r"\beval\s*\(|new\s+Function\s*\(|Function\s*\(", re.IGNORECASE), "JS-DEOB-DYNAMIC", "Dynamic JavaScript execution", 8, "malicious"),
     (re.compile(r"(?:fetch|XMLHttpRequest|WebSocket|http\.request|https\.request)\s*\(", re.IGNORECASE), "JS-DEOB-NETWORK", "Decoded network behavior", 6, "malicious"),
@@ -58,10 +57,6 @@ def deobfuscate_javascript(text: str) -> dict[str, object]:
             continue
         decoded.append({"encoding": "base64", "source": match.group(0), "decoded": value, "line": text.count("\n", 0, match.start()) + 1})
         transformed = transformed.replace(match.group(0), repr(value), 1)
-    for match in _ESCAPE_RE.finditer(text):
-        token = match.group(0)
-        value = chr(int(match.group(1) or match.group(2), 16))
-        decoded.append({"encoding": "escape", "source": token, "decoded": value, "line": text.count("\n", 0, match.start()) + 1})
     for item in decode_literal_candidates(text):
         decoded.append(item)
     findings: list[dict[str, object]] = []

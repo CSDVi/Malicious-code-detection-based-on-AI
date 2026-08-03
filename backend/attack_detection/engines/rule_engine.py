@@ -21,26 +21,19 @@ class RuleEngine:
             if isinstance(match, dict) and is_active_finding(match)
         ]
         type_counts = Counter(str(match.get("risk_type", "unknown")) for match in matches)
-        severity = sum(int(match.get("severity") or 0) for match in matches)
-        risk_score = min(95, int(severity * 7.5)) if matches else 0
-        if type_counts["malicious"]:
-            decision = "malicious"
-        elif type_counts["vulnerable"]:
-            decision = "vulnerable"
-        elif matches:
-            decision = "unknown"
-        else:
-            decision = "benign"
         return EngineResult(
             name=self.name,
             status="completed",
-            decision=decision,
-            risk_score=risk_score,
+            decision="not_applicable",
+            risk_score=None,
             duration_ms=int((time.perf_counter() - start) * 1000),
             findings=matches,
             metadata={
                 "hits": len(matches),
                 "malicious_hits": type_counts["malicious"],
                 "vulnerability_hits": type_counts["vulnerable"],
+                "role": "explanation_only",
+                "affects_final_decision": False,
+                "affects_risk_score": False,
             },
         ).to_dict()

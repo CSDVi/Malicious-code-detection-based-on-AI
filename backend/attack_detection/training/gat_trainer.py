@@ -189,7 +189,7 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
     language_thresholds, validation_metrics_by_language, test_metrics_by_language = (
         _calibrate_language_thresholds(
             records_by_split, val_logits, val_labels, test_logits, test_labels,
-            eligible_languages, threshold, temperature,
+            eligible_languages, threshold, temperature, args.threshold_plateau_position,
         )
     )
     supported_languages = [
@@ -253,8 +253,8 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
         "label_leakage_guard": "node.label and node.line_labels are excluded from features",
         "calibrated": True,
         "threshold_policy": (
-            "upper quartile of the widest contiguous validation interval "
-            "that passes the deployment gate"
+            f"{args.threshold_plateau_position:.2f} position of the widest contiguous "
+            "validation interval that passes the deployment gate"
         ),
         "temperature": temperature,
         "threshold": threshold,
@@ -536,6 +536,7 @@ def _calibrate_language_thresholds(
     validation_logits: list[list[float]], validation_labels: list[int],
     test_logits: list[list[float]], test_labels: list[int],
     eligible_languages: list[str], global_threshold: float, temperature: float,
+    threshold_plateau_position: float = 0.75,
 ) -> tuple[dict[str, float], dict[str, Any], dict[str, Any]]:
     languages = sorted({
         language
@@ -559,7 +560,9 @@ def _calibrate_language_thresholds(
         if language in eligible_languages:
             selected_threshold, selected_metrics = _best_gated_threshold(
                 [validation_logits[index] for index in validation_indices],
-                [validation_labels[index] for index in validation_indices], temperature,
+                [validation_labels[index] for index in validation_indices],
+                temperature,
+                threshold_plateau_position,
             )
         else:
             selected_metrics = _metrics(
@@ -580,7 +583,10 @@ def _calibrate_language_thresholds(
 
 
 def _best_gated_threshold(
-    logits: list[list[float]], labels: list[int], temperature: float,
+    logits: list[list[float]],
+    labels: list[int],
+    temperature: float,
+    threshold_plateau_position: float = 0.75,
 ) -> tuple[float, dict[str, float]]:
     candidates: list[tuple[float, dict[str, float]]] = []
     for step in range(10, 91):
@@ -595,10 +601,9 @@ def _best_gated_threshold(
     if not candidates:
         return _best_threshold(logits, labels, temperature)
     # A boundary threshold can look optimal on a small validation cohort yet
-    # collapse under a tiny calibration shift. Select the upper quartile of
-    # the widest contiguous gate-passing interval instead. This still uses
-    # validation labels only, stays inside the FNR gate, and gives the
-    # production scanner extra false-positive headroom.
+    # collapse under a tiny calibration shift. Select a configurable point in
+    # the widest contiguous gate-passing interval. Higher values are more
+    # precision-biased; lower values are more recall-biased.
     intervals: list[list[tuple[float, dict[str, float]]]] = []
     current: list[tuple[float, dict[str, float]]] = []
     for candidate in candidates:
@@ -615,7 +620,8 @@ def _best_gated_threshold(
             sum(item[1]["f1"] for item in values) / len(values),
         ),
     )
-    stable_target = stable[0][0] + (stable[-1][0] - stable[0][0]) * 0.75
+    position = max(0.0, min(1.0, threshold_plateau_position))
+    stable_target = stable[0][0] + (stable[-1][0] - stable[0][0]) * position
     return min(
         stable,
         key=lambda item: (
@@ -726,6 +732,15 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=20260720)
     parser.add_argument("--cpu", action="store_true")
     parser.add_argument("--limit", type=int, default=0, help="Smoke-test graph limit per split")
+    parser.add_argument(
+        "--threshold-plateau-position",
+        type=float,
+        default=0.75,
+        help=(
+            "Position inside the widest validation gate-passing threshold interval; "
+            "0.0 is recall-biased, 1.0 is precision-biased."
+        ),
+    )
     args = parser.parse_args()
     print(json.dumps(train(args), ensure_ascii=True, indent=2))
 

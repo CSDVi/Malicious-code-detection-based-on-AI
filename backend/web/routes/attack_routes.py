@@ -26,10 +26,10 @@ from attack_detection.database import (
     save_project_results,
     save_scan_job,
 )
+from attack_detection.cancellation import raise_if_cancelled
 from attack_detection.jobs import scan_jobs
 from attack_detection.fusion import risk_level as score_risk_level
 from attack_detection.explainability import (
-    build_ai_decision_evidence,
     build_ai_explainability,
     merge_model_line_attributions,
     order_evidence_items,
@@ -39,6 +39,7 @@ from attack_detection.languages import (
     BINARY_EXTENSIONS,
     EXTENSION_LANGUAGE,
     display_language,
+    language_from_path,
 )
 from attack_detection.model_center import (
     LANGUAGE_DISPLAY_ORDER,
@@ -50,6 +51,12 @@ from attack_detection.model_center import (
 from attack_detection.model_registry import activate_version, runtime_status
 from attack_detection.project_scanner import ArchiveTooLargeError, scan_zip_project, stage_project_archive
 from attack_detection.report import render_record_markdown
+from attack_detection.remediation import remediation_for_finding
+from attack_detection.report_insights import (
+    RISK_LEVEL_LABELS,
+    build_file_report_insights,
+    build_project_report_insights,
+)
 from attack_detection.risk_taxonomy import taxonomy_for_category
 from attack_detection.scanner import scan_file
 from attack_detection.task_policy import is_active_finding
@@ -317,10 +324,11 @@ def _auxiliary_analysis_view(result: dict[str, object] | None) -> dict[str, list
             "detail": (
                 f"{metadata.get('provider') or '外部服务'}已返回："
                 f"恶意 {int(metadata.get('malicious') or 0)}，"
-                f"可疑 {int(metadata.get('suspicious') or 0)}"
+                f"可疑 {int(metadata.get('suspicious') or 0)}；"
+                "仅作外部复核线索，不参与AI结论或风险分"
             ),
         })
-    else:
+    elif _external_reputation_was_configured(reputation):
         inactive.append({
             "name": "SHA256 外部信誉",
             "detail": _external_reputation_reason(reputation),
@@ -362,6 +370,25 @@ def _auxiliary_inactive_reason(engine: dict[str, object] | None, default: str) -
     if status == "unavailable":
         return "当前不可用"
     return default
+
+
+def _external_reputation_was_configured(
+    engine: dict[str, object] | None,
+) -> bool:
+    if not engine:
+        return False
+    metadata = engine.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    reason = str(engine.get("reason") or engine.get("error") or "").lower()
+    return bool(metadata.get("provider")) or engine.get("status") == "failed" or any(
+        token in reason
+        for token in (
+            "hash not found",
+            "unsupported reputation provider",
+            "api key is not configured",
+            "api_key is not configured",
+        )
+    )
 
 
 def _external_reputation_reason(engine: dict[str, object] | None) -> str:
@@ -413,10 +440,37 @@ def index():
         if Path(filename).suffix.lower() not in upload_contract["extensions"]:
             flash("不支持该文件类型，请使用检测中心列出的源码、YAML 或 EXE/DLL/SYS/OCX 格式。")
             return redirect(url_for("attack.index", tab="file"))
-        result = scan_file(filename, payload, mode=mode)
-        record_id = save_detection(current_user.username, result)
+        job = scan_jobs.submit(
+            mode,
+            current_user.username,
+            filename,
+            lambda cancel_event, progress: _scan_single_file(
+                filename,
+                payload,
+                mode,
+                cancel_event,
+                progress,
+            ),
+            on_update=_persist_file_job,
+            target_type="file",
+        )
+        return redirect(url_for("attack.index", job_id=job.id))
     else:
-        job = _latest_active_project_job(current_user.username)
+        job_id = request.args.get("job_id", "").strip()
+        if job_id:
+            job = scan_jobs.get(job_id)
+            if job is None:
+                job = get_scan_job(job_id, current_user.username)
+            job_username = job.get("username") if isinstance(job, dict) else getattr(job, "username", None)
+            job_target_type = job.get("target_type") if isinstance(job, dict) else getattr(job, "target_type", None)
+            if not job or job_username != current_user.username or job_target_type != "file":
+                abort(404)
+            job_status_value = job.get("status") if isinstance(job, dict) else job.status
+            if job_status_value == "completed":
+                result = job.get("result") if isinstance(job, dict) else job.result
+                record_id = (result or {}).get("_record_id")
+        else:
+            job = _latest_active_scan_job(current_user.username, "file")
 
     return render_template(
         "attack/index.html",
@@ -429,6 +483,10 @@ def index():
         single_file_language_labels=upload_contract["labels"],
         single_file_accept=upload_contract["accept"],
         auxiliary_analysis=_auxiliary_analysis_view(result),
+        file_report_insights=build_file_report_insights(
+            result,
+            model_center_view() if result else None,
+        ),
     )
 
 
@@ -471,6 +529,7 @@ def project_scan():
                 progress,
             ),
             on_update=_persist_project_job,
+            target_type="project",
         )
         return redirect(url_for("attack.project_scan", job_id=job.id))
     else:
@@ -480,14 +539,15 @@ def project_scan():
             if job is None:
                 job = get_scan_job(job_id, current_user.username)
             job_username = job.get("username") if isinstance(job, dict) else getattr(job, "username", None)
-            if not job or job_username != current_user.username:
+            job_target_type = job.get("target_type") if isinstance(job, dict) else getattr(job, "target_type", None)
+            if not job or job_username != current_user.username or job_target_type != "project":
                 abort(404)
             job_status_value = job.get("status") if isinstance(job, dict) else job.status
             if job_status_value == "completed":
                 result = job.get("result") if isinstance(job, dict) else job.result
                 result = _project_result_view(result)
         else:
-            job = _latest_active_project_job(current_user.username)
+            job = _latest_active_scan_job(current_user.username, "project")
 
     return render_template(
         "attack/index.html",
@@ -497,6 +557,10 @@ def project_scan():
         record_id=None,
         job=job,
         mode_availability=_mode_availability(),
+        project_report_insights=build_project_report_insights(
+            result,
+            model_center_view() if result else None,
+        ),
     )
 
 
@@ -508,7 +572,13 @@ def project_file_detail(job_id: str, file_index: int):
         job = get_scan_job(job_id, current_user.username)
     job_username = job.get("username") if isinstance(job, dict) else getattr(job, "username", None)
     job_status_value = job.get("status") if isinstance(job, dict) else getattr(job, "status", None)
-    if not job or job_username != current_user.username or job_status_value != "completed":
+    job_target_type = job.get("target_type") if isinstance(job, dict) else getattr(job, "target_type", None)
+    if (
+        not job
+        or job_username != current_user.username
+        or job_status_value != "completed"
+        or job_target_type != "project"
+    ):
         abort(404)
 
     project_result = _project_result_view(job.get("result") if isinstance(job, dict) else job.result)
@@ -524,20 +594,16 @@ def project_file_detail(job_id: str, file_index: int):
     evidence_items.sort(
         key=_project_evidence_sort_key
     )
-    model_results = [
-        dict(engine)
-        for engine in file_result.get("engines") or []
-        if isinstance(engine, dict)
-        and engine.get("name") in {"xgboost_malicious", "codet5p"}
-        and engine.get("status") == "completed"
-    ]
     return render_template(
         "attack/project_file_detail.html",
         job_id=job_id,
         project_name=str((project_result or {}).get("project_name") or "项目检测"),
         file_result=file_result,
         evidence_items=evidence_items,
-        model_results=model_results,
+        file_report_insights=build_file_report_insights(
+            file_result,
+            model_center_view(),
+        ),
     )
 
 
@@ -574,6 +640,9 @@ def _project_result_view(project_result: dict[str, object] | None) -> dict[str, 
     if not isinstance(project_result, dict):
         return None
     result = dict(project_result)
+    average_score = float(result.get("average_score") or 0)
+    max_score = float(result.get("max_score") or 0)
+    result["risk_score"] = round(max(average_score, max_score * 0.8), 1)
     high_risk_files = [
         dict(item)
         for item in result.get("high_risk_files") or []
@@ -601,6 +670,8 @@ def _project_result_view(project_result: dict[str, object] | None) -> dict[str, 
         display_files.append({
             **normalized,
             "language": "unknown",
+            "display_language": "未检测",
+            "filter_language": "__skipped__",
             "final_decision": "unknown",
             "risk_level": "unknown",
             "risk_score": None,
@@ -612,7 +683,15 @@ def _project_result_view(project_result: dict[str, object] | None) -> dict[str, 
         extension_counts[extension] = extension_counts.get(extension, 0) + 1
 
     for detail_index, item in enumerate(high_risk_files):
-        extension = _project_file_extension(str(item.get("filename") or ""))
+        filename = str(item.get("filename") or "")
+        extension = _project_file_extension(filename)
+        raw_language = str(item.get("language") or "unknown")
+        if raw_language == "unknown":
+            raw_language = language_from_path(filename)
+        display_lang = str(
+            item.get("display_language")
+            or display_language(raw_language, filename)
+        )
         row = dict(item)
         row.update({
             "project_serial": len(display_files) + 1,
@@ -620,13 +699,8 @@ def _project_result_view(project_result: dict[str, object] | None) -> dict[str, 
             "detail_available": str(item.get("effective_mode") or "") in {"standard", "deep"},
             "file_extension": extension,
             "scan_status": "completed",
-            "display_language": (
-                item.get("display_language")
-                or display_language(
-                    str(item.get("language") or "unknown"),
-                    str(item.get("filename") or ""),
-                )
-            ),
+            "display_language": display_lang,
+            "filter_language": display_lang,
         })
         display_files.append(row)
         extension_counts[extension] = extension_counts.get(extension, 0) + 1
@@ -642,12 +716,13 @@ def _project_result_view(project_result: dict[str, object] | None) -> dict[str, 
     if high_risk_files:
         language_counts: dict[str, int] = {}
         for item in high_risk_files:
+            filename = str(item.get("filename") or "")
+            raw_language = str(item.get("language") or "unknown")
+            if raw_language == "unknown":
+                raw_language = language_from_path(filename)
             concrete_language = str(
                 item.get("display_language")
-                or display_language(
-                    str(item.get("language") or "unknown"),
-                    str(item.get("filename") or ""),
-                )
+                or display_language(raw_language, filename)
             )
             item["display_language"] = concrete_language
             language_counts[concrete_language] = (
@@ -658,6 +733,18 @@ def _project_result_view(project_result: dict[str, object] | None) -> dict[str, 
     result["skipped_files"] = normalized_skipped
     result["other_warnings"] = other_warnings
     result["warning_count"] = len(normalized_skipped) + len(other_warnings)
+    skipped_reason_counts: dict[str, int] = {}
+    for item in normalized_skipped:
+        reason = str(item.get("reason") or "受扫描安全限制")
+        skipped_reason_counts[reason] = skipped_reason_counts.get(reason, 0) + 1
+    result["skipped_reason_counts"] = [
+        {"reason": reason, "count": count}
+        for reason, count in sorted(skipped_reason_counts.items())
+    ]
+    result["warning_breakdown"] = {
+        "skipped_file_count": len(normalized_skipped),
+        "other_limit_count": len(other_warnings),
+    }
     result["quick_only_file_count"] = int(
         result.get("quick_only_file_count")
         or max(0, len(high_risk_files) - int(result.get("deep_scanned_file_count") or 0))
@@ -670,6 +757,46 @@ def _project_result_view(project_result: dict[str, object] | None) -> dict[str, 
         }
         for extension, count in sorted(extension_counts.items(), key=lambda item: item[0])
     ]
+    language_filters: dict[str, dict[str, object]] = {}
+    risk_filters: dict[str, dict[str, object]] = {}
+    for row in display_files:
+        language_value = str(
+            row.get("filter_language")
+            or row.get("display_language")
+            or row.get("language")
+            or "unknown"
+        )
+        language_label = (
+            "未检测"
+            if language_value == "__skipped__"
+            else str(row.get("display_language") or language_value)
+        )
+        language_option = language_filters.setdefault(
+            language_value,
+            {"value": language_value, "label": language_label, "count": 0},
+        )
+        language_option["count"] = int(language_option["count"]) + 1
+
+        risk_value = str(row.get("risk_level") or "unknown")
+        risk_label = RISK_LEVEL_LABELS.get(risk_value, risk_value)
+        risk_option = risk_filters.setdefault(
+            risk_value,
+            {"value": risk_value, "label": risk_label, "count": 0},
+        )
+        risk_option["count"] = int(risk_option["count"]) + 1
+
+    risk_order = {
+        key: index
+        for index, key in enumerate(("critical", "high", "medium", "low", "safe", "unknown"))
+    }
+    result["file_language_filters"] = sorted(
+        language_filters.values(),
+        key=lambda item: (str(item["value"]) == "__skipped__", str(item["label"]).casefold()),
+    )
+    result["file_risk_filters"] = sorted(
+        risk_filters.values(),
+        key=lambda item: (risk_order.get(str(item["value"]), 99), str(item["label"])),
+    )
     return result
 
 
@@ -761,6 +888,7 @@ def _job_payload(job, include_result: bool = True) -> dict[str, object]:
     if isinstance(job, dict):
         payload = {
             "id": job.get("id"), "username": job.get("username"), "mode": job.get("mode"),
+            "target_type": job.get("target_type", "project"),
             "target_name": job.get("target_name"), "status": job.get("status"), "stage": job.get("stage"),
             "processed_files": job.get("processed_files", 0), "total_files": job.get("total_files", 0),
             "created_at": job.get("created_at"), "started_at": job.get("started_at"),
@@ -774,6 +902,7 @@ def _job_payload(job, include_result: bool = True) -> dict[str, object]:
         "id": job.id,
         "username": job.username,
         "mode": job.mode,
+        "target_type": job.target_type,
         "target_name": job.target_name,
         "status": job.status,
         "stage": job.stage,
@@ -783,7 +912,10 @@ def _job_payload(job, include_result: bool = True) -> dict[str, object]:
         "started_at": job.started_at,
         "finished_at": job.finished_at,
         "error": job.error,
-        "risk_score": (job.result or {}).get("max_score") if job.result else None,
+        "risk_score": (
+            (job.result or {}).get("risk_score", (job.result or {}).get("max_score"))
+            if job.result else None
+        ),
         "final_decision": (job.result or {}).get("final_decision") if job.result else None,
     }
     if include_result:
@@ -791,11 +923,12 @@ def _job_payload(job, include_result: bool = True) -> dict[str, object]:
     return payload
 
 
-def _latest_active_project_job(username: str):
+def _latest_active_scan_job(username: str, target_type: str):
     return next(
         (
             job for job in scan_jobs.list(username)
-            if job.status in {"queued", "running", "cancelling"}
+            if job.target_type == target_type
+            and job.status in {"queued", "running", "cancelling"}
         ),
         None,
     )
@@ -808,61 +941,133 @@ def _persist_project_job(job) -> None:
         save_project_results(job.id, job.username, job.result)
 
 
+def _persist_file_job(job) -> None:
+    if job.status == "completed" and job.result and not job.result.get("_record_id"):
+        job.result["_record_id"] = save_detection(job.username, job.result)
+    save_scan_job(_job_payload(job))
+
+
 @attack_bp.route("/history")
 @login_required
 def history():
-    records = list_record_summaries(current_user.username, 500)
-    for item in records:
+    all_records = list_record_summaries(current_user.username, 500)
+    for item in all_records:
         item["display_language"] = display_language(
             str(item.get("language") or "unknown"),
             str(item.get("filename") or ""),
         )
-    project_jobs = list_scan_jobs(
+        extension = Path(str(item.get("filename") or "")).suffix.lower()
+        item["file_type"] = extension or "__none__"
+        item["file_type_label"] = extension.upper() if extension else "无后缀"
+
+    all_project_jobs = list_scan_jobs(
         current_user.username,
         100,
         include_result=False,
+        target_type="project",
     )
-    for project_job in project_jobs:
-        project_job["risk_level"] = score_risk_level(
-            int(project_job.get("risk_score") or 0)
+    for project_job in all_project_jobs:
+        project_risk_score = project_job.get("risk_score")
+        project_job["risk_level"] = (
+            score_risk_level(int(project_risk_score))
+            if project_risk_score is not None
+            else "unknown"
         )
-    query = request.args.get("q", "").strip().lower()
-    risk = request.args.get("risk", "").strip().lower()
-    mode = request.args.get("mode", "").strip().lower()
-    date_from = request.args.get("date_from", "").strip()
-    date_to = request.args.get("date_to", "").strip()
-    if query:
-        records = [
-            item for item in records
-            if query in item["filename"].lower()
-            or query in item["file_hash"].lower()
-            or any(query in str(category).lower() for category in item["categories"])
+
+    allowed_risks = {"critical", "high", "medium", "low", "safe"}
+    query = request.args.get("q", "").strip()[:160]
+    query_folded = query.casefold()
+    project_risk = request.args.get("project_risk", "").strip().lower()
+    file_risk = request.args.get("file_risk", "").strip().lower()
+    file_type = request.args.get("file_type", "").strip().lower()
+    if project_risk not in allowed_risks:
+        project_risk = ""
+    if file_risk not in allowed_risks:
+        file_risk = ""
+
+    file_type_options = sorted(
+        {(item["file_type"], item["file_type_label"]) for item in all_records},
+        key=lambda option: (option[0] == "__none__", option[1]),
+    )
+    allowed_file_types = {value for value, _label in file_type_options}
+    if file_type not in allowed_file_types:
+        file_type = ""
+
+    filtered_projects = all_project_jobs
+    if query_folded:
+        filtered_projects = [
+            item for item in filtered_projects
+            if query_folded in str(item.get("target_name") or "").casefold()
+            or query_folded in str(item.get("id") or "").casefold()
         ]
-        project_jobs = [
-            item for item in project_jobs
-            if query in str(item.get("target_name") or "").lower() or query in str(item.get("id") or "").lower()
+    if project_risk:
+        filtered_projects = [
+            item for item in filtered_projects
+            if item.get("risk_level") == project_risk
         ]
-    if risk:
-        records = [item for item in records if item["risk_level"] == risk]
-        project_jobs = [
-            item for item in project_jobs
-            if item.get("risk_level") == risk
+
+    filtered_records = all_records
+    if query_folded:
+        filtered_records = [
+            item for item in filtered_records
+            if query_folded in str(item.get("filename") or "").casefold()
+            or query_folded in str(item.get("file_hash") or "").casefold()
+            or query_folded in str(item.get("id") or "").casefold()
         ]
-    if mode:
-        records = [item for item in records if (item.get("effective_mode") or "") == mode]
-        project_jobs = [item for item in project_jobs if (item.get("mode") or "") == mode]
-    if date_from:
-        records = [item for item in records if item["created_at"][:10] >= date_from]
-        project_jobs = [item for item in project_jobs if str(item.get("created_at") or "")[:10] >= date_from]
-    if date_to:
-        records = [item for item in records if item["created_at"][:10] <= date_to]
-        project_jobs = [item for item in project_jobs if str(item.get("created_at") or "")[:10] <= date_to]
+    if file_risk:
+        filtered_records = [
+            item for item in filtered_records
+            if item.get("risk_level") == file_risk
+        ]
+    if file_type:
+        filtered_records = [
+            item for item in filtered_records
+            if item.get("file_type") == file_type
+        ]
+
+    project_jobs, project_pagination = _paginate_history_rows(
+        filtered_projects,
+        request.args.get("project_page", "1"),
+    )
+    records, file_pagination = _paginate_history_rows(
+        filtered_records,
+        request.args.get("file_page", "1"),
+    )
     return render_template(
         "attack/history.html",
         records=records,
         project_jobs=project_jobs,
-        filters={"q": query, "risk": risk, "mode": mode, "date_from": date_from, "date_to": date_to},
+        project_pagination=project_pagination,
+        file_pagination=file_pagination,
+        file_type_options=file_type_options,
+        filters={
+            "q": query,
+            "project_risk": project_risk,
+            "file_risk": file_risk,
+            "file_type": file_type,
+        },
     )
+
+
+def _paginate_history_rows(rows: list[dict], requested_page: str, page_size: int = 10):
+    try:
+        page = max(1, int(requested_page))
+    except (TypeError, ValueError):
+        page = 1
+    total = len(rows)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = min(page, total_pages)
+    start = (page - 1) * page_size
+    return rows[start:start + page_size], {
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages,
+        "has_previous": page > 1,
+        "has_next": page < total_pages,
+        "previous_page": max(1, page - 1),
+        "next_page": min(total_pages, page + 1),
+    }
 
 
 @attack_bp.route("/history/compare")
@@ -897,6 +1102,10 @@ def record(record_id: int):
         "attack/record.html",
         record=public_record,
         auxiliary_analysis=_auxiliary_analysis_view(public_record),
+        file_report_insights=build_file_report_insights(
+            public_record,
+            model_center_view(),
+        ),
     )
 
 
@@ -922,7 +1131,6 @@ def models():
     jobs = list_training_jobs(None if current_user.role == "admin" else current_user.username, 50)
     return render_template(
         "attack/models.html",
-        performance_rows=center["performance_rows"],
         version_groups=center["version_groups"],
         runtime_models=_visible_runtime_models(runtime_status()),
         training_jobs=jobs,
@@ -1021,7 +1229,7 @@ def activate_xgb_model(version: str):
 @attack_bp.route("/evaluation")
 @login_required
 def evaluation():
-    return redirect(url_for("attack.models", _anchor="performance"))
+    return redirect(url_for("attack.models", _anchor="versions"))
 
 
 @attack_bp.route("/stats")
@@ -1053,15 +1261,11 @@ def _public_record_view(record_data: dict[str, object]) -> dict[str, object]:
         match for match in (data.get("rule_matches") or [])
         if isinstance(match, dict) and is_active_finding(match)
     ]
-    if data.get("ai_decision") == "benign":
-        data["rule_matches"] = (
-            [
-                match for match in data["rule_matches"]
-                if match.get("risk_type") == "vulnerable"
-            ]
-            if data.get("final_decision") == "vulnerable"
-            else []
-        )
+    if not (
+        data.get("final_decision") == "malicious"
+        and data.get("decision_authority") == "ai"
+    ):
+        data["rule_matches"] = []
     data["engines"] = [
         engine for engine in (data.get("engines") or [])
         if not (
@@ -1077,6 +1281,18 @@ def _public_record_view(record_data: dict[str, object]) -> dict[str, object]:
             "harm",
             match.get("description") or "该位置可能引入代码或配置安全风险。",
         )
+        remediation = remediation_for_finding(
+            match,
+            str(data.get("language") or "unknown"),
+        )
+        if not match.get("cwe"):
+            match["cwe"] = remediation.get("cwe")
+        if not match.get("cve_examples"):
+            match["cve_examples"] = remediation.get("cve_examples") or []
+        if not match.get("repair_suggestions"):
+            match["repair_suggestions"] = remediation.get("suggestions") or []
+        if not match.get("remediation_references"):
+            match["remediation_references"] = remediation.get("references") or []
         taxonomy = taxonomy_for_category(str(match.get("category") or ""))
         match.setdefault("risk_domains", taxonomy["risk_domains"])
         match.setdefault(
@@ -1091,7 +1307,6 @@ def _public_record_view(record_data: dict[str, object]) -> dict[str, object]:
     data["evidence_items"] = order_evidence_items(
         merged_evidence,
         ai_only_evidence,
-        build_ai_decision_evidence(data),
     )
     data["ai_explainability"] = build_ai_explainability(
         data["engines"],
@@ -1158,6 +1373,28 @@ def _scan_staged_project(
         )
     finally:
         path.unlink(missing_ok=True)
+
+
+def _scan_single_file(
+    filename: str,
+    payload: bytes,
+    mode: str,
+    cancel_event,
+    progress,
+) -> dict[str, object]:
+    progress(10, 100, "正在准备文件")
+    raise_if_cancelled(cancel_event)
+    progress(30, 100, "AI 模型检测中")
+    result = scan_file(
+        filename,
+        payload,
+        mode=mode,
+        cancel_event=cancel_event,
+    )
+    raise_if_cancelled(cancel_event)
+    progress(90, 100, "正在生成检测报告")
+    progress(100, 100, "检测完成")
+    return result
 
 
 def _mode_availability() -> dict[str, dict[str, object]]:

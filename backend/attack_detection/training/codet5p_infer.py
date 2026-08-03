@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from attack_detection.task_policy import task_enabled
+from attack_detection.training.codet5p_policy import effective_decision_threshold
 
 
 TASK_DECISIONS = {
@@ -126,10 +127,14 @@ def infer_requests(
                         manifest,
                         device,
                     )
+                trained_threshold = float(
+                    manifest.get("trained_threshold", manifest["threshold"])
+                )
                 task_outputs[task] = {
                     "decision": decision,
                     "probability": probability,
-                    "threshold": float(manifest["threshold"]),
+                    "threshold": effective_decision_threshold(manifest["threshold"]),
+                    "trained_threshold": trained_threshold,
                     "model_version": version,
                 }
             except Exception as exc:
@@ -159,6 +164,7 @@ def infer_requests(
             "decision": decision,
             "probability": primary["probability"],
             "threshold": primary["threshold"],
+            "trained_threshold": primary["trained_threshold"],
             "model_version": ", ".join(sorted({value["model_version"] for value in task_outputs.values()})),
             "primary_task": primary_task,
             "task_probabilities": {
@@ -166,6 +172,9 @@ def infer_requests(
             },
             "task_thresholds": {
                 task: value["threshold"] for task, value in task_outputs.items()
+            },
+            "task_trained_thresholds": {
+                task: value["trained_threshold"] for task, value in task_outputs.items()
             },
             "task_versions": {
                 task: value["model_version"] for task, value in task_outputs.items()

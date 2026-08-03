@@ -372,6 +372,7 @@ def _manifest_group(key: str, name: str, manifest: dict[str, Any]) -> dict[str, 
         scopes,
         metrics_by_language,
         supported_languages_by_task,
+        manifest.get("language_coverage") or {} if key == "gatv2" else {},
     )
     if not task_rows:
         return {
@@ -398,6 +399,7 @@ def _task_rows(
     scopes: dict[str, str] | None = None,
     metrics_by_language: dict[str, Any] | None = None,
     supported_languages_by_task: dict[str, Any] | None = None,
+    language_coverage_by_language: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     rows = []
     for task_name, metrics in tasks.items():
@@ -455,10 +457,12 @@ def _task_rows(
             "false_negative_rate": _number(display_metrics.get("false_negative_rate")),
             "f1": _number(display_metrics.get("f1")),
             "samples": _integer(display_metrics.get("samples")),
+            "confusion_matrix": _confusion_dict(display_metrics),
             "language_metrics": _language_metric_rows(
                 language_metrics,
                 task_name,
                 supported,
+                language_coverage_by_language,
             ),
         })
     return rows
@@ -468,6 +472,7 @@ def _language_metric_rows(
     metrics_by_language: dict[str, Any],
     task_name: str,
     supported_languages: list[str] | tuple[str, ...] | set[str] | None = None,
+    language_coverage_by_language: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     rows = []
     normalized_metrics = {
@@ -512,6 +517,12 @@ def _language_metric_rows(
         samples = _integer(display_metrics.get("samples"))
         positive_samples = _integer(display_metrics.get("positive_samples"))
         negative_samples = _integer(display_metrics.get("negative_samples"))
+        coverage = (language_coverage_by_language or {}).get(normalized) or {}
+        test_coverage = (coverage.get("splits") or {}).get("test") or {}
+        if positive_samples is None:
+            positive_samples = _integer(test_coverage.get("positive"))
+        if negative_samples is None:
+            negative_samples = _integer(test_coverage.get("negative"))
         if full_metrics:
             metric_note = "独立评测"
         elif display_metrics.get("insufficient_for_full_metrics") is True:
@@ -532,6 +543,11 @@ def _language_metric_rows(
             "false_negative_rate": false_negative_rate,
             "f1": f1,
             "samples": samples,
+            "confusion_matrix": _confusion_dict(
+                display_metrics,
+                positive_samples=positive_samples,
+                negative_samples=negative_samples,
+            ),
             "full_metrics": full_metrics,
             "metric_note": metric_note,
         })
@@ -633,6 +649,22 @@ def _confusion_counts(
     fp = round(false_positive_rate * negatives)
     fn = round(false_negative_rate * positives)
     return negatives - fp, fp, fn, positives - fn
+
+
+def _confusion_dict(
+    metrics: dict[str, Any],
+    *,
+    positive_samples: int | None = None,
+    negative_samples: int | None = None,
+) -> dict[str, int] | None:
+    counts = _confusion_counts(
+        metrics,
+        positive_samples=positive_samples,
+        negative_samples=negative_samples,
+    )
+    if counts is None:
+        return None
+    return dict(zip(("tn", "fp", "fn", "tp"), counts))
 
 
 def _pooled_language_metrics(

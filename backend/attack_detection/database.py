@@ -374,7 +374,7 @@ def save_training_job(payload: dict[str, Any]) -> None:
 
 
 def save_scan_job(payload: dict[str, Any]) -> None:
-    """Persist project task state so it survives page refreshes and restarts."""
+    """Persist scan task state so it survives page refreshes and restarts."""
     with get_connection() as conn:
         for column, column_type in (("result_json", "TEXT"), ("processed_files", "INTEGER"),
                                     ("total_files", "INTEGER"), ("stage", "TEXT")):
@@ -391,7 +391,8 @@ def save_scan_job(payload: dict[str, Any]) -> None:
                 result_json=excluded.result_json, processed_files=excluded.processed_files,
                 total_files=excluded.total_files, stage=excluded.stage""",
             (
-                payload["id"], payload["username"], payload["mode"], "project", payload["target_name"],
+                payload["id"], payload["username"], payload["mode"],
+                payload.get("target_type", "project"), payload["target_name"],
                 payload["status"], payload.get("risk_score"), payload.get("final_decision"), payload.get("error"),
                 _iso_time(payload.get("created_at")), _iso_time(payload.get("started_at")),
                 _iso_time(payload.get("finished_at")),
@@ -406,6 +407,7 @@ def list_scan_jobs(
     limit: int = 20,
     *,
     include_result: bool = True,
+    target_type: str | None = None,
 ) -> list[dict[str, Any]]:
     columns = (
         "*"
@@ -417,10 +419,16 @@ def list_scan_jobs(
         )
     )
     with get_connection() as conn:
+        where = "WHERE username=?"
+        params: list[Any] = [username]
+        if target_type:
+            where += " AND target_type=?"
+            params.append(target_type)
+        params.append(limit)
         rows = conn.execute(
-            f"SELECT {columns} FROM scan_jobs WHERE username=? "
+            f"SELECT {columns} FROM scan_jobs {where} "
             "ORDER BY created_at DESC LIMIT ?",
-            (username, limit),
+            params,
         ).fetchall()
     return [_scan_job(row, include_result=include_result) for row in rows]
 
@@ -553,6 +561,8 @@ def _insert_detection(
                 ),
                 "ai_conflict": bool(result.get("ai_conflict")),
                 "ai_uncertain": bool(result.get("ai_uncertain")),
+                "ai_unresolved_reason": result.get("ai_unresolved_reason"),
+                "rules_role": result.get("rules_role") or "explanation_only",
                 "rule_fallback_used": bool(
                     result.get("rule_fallback_used")
                 ),

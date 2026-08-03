@@ -1,0 +1,124 @@
+{% from "attack/_report_chart_macros.html" import categorical_columns, model_radar %}
+<section class="report-chart-grid project-report-charts section-block">
+    {% set relationship_graph = project_report_insights.relationship_graph %}
+    {% set graph_status = project_report_insights.graph_model_status %}
+    {% if relationship_graph or graph_status %}
+    <article class="panel motion-card report-chart-card report-chart-card-wide project-call-graph-card">
+        <div class="section-title compact-title report-chart-heading">
+            <div><h2>项目文件调用关系</h2></div>
+            <span class="report-chart-unit">{% if relationship_graph %}{{ relationship_graph.node_count }} 文件 · {{ relationship_graph.edge_count }} 条关系{% else %}GATv2{% endif %}</span>
+        </div>
+        {% if graph_status %}
+        <div class="project-graph-model-status status-{{ graph_status.status }}">
+            <span class="status-dot status-{{ graph_status.status }}"></span>
+            <strong>GATv2 · {{ graph_status.label }}</strong>
+            <span>{{ graph_status.detail }}</span>
+            {% if graph_status.model_version %}<code>{{ graph_status.model_version }}</code>{% endif %}
+        </div>
+        {% endif %}
+        {% if relationship_graph and relationship_graph.edges %}
+        <figure class="project-call-graph-figure">
+            <svg class="project-call-graph" viewBox="0 0 {{ relationship_graph.width }} {{ relationship_graph.height }}" role="img" aria-labelledby="project-call-graph-title project-call-graph-description">
+                <title id="project-call-graph-title">项目文件调用关系图</title>
+                <desc id="project-call-graph-description">显示能够唯一解析到项目内文件的导入、包含、依赖、脚本引用和页面加载关系</desc>
+                <defs>
+                    <marker id="project-call-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker>
+                </defs>
+                {% for edge in relationship_graph.edges %}
+                <path d="{{ edge.path }}" class="project-call-edge relation-{{ edge.relation }}" marker-end="url(#project-call-arrow)"><title>{{ edge.relation_label }}</title></path>
+                {% endfor %}
+                {% for node in relationship_graph.nodes %}
+                <g class="project-call-node risk-node-{{ node.risk_level }}" transform="translate({{ node.x }} {{ node.y }})">
+                    <title>{{ node.path }} · 风险分 {{ node.risk_score }}</title>
+                    <circle r="7"></circle>
+                    <circle class="project-call-node-core" r="2.4"></circle>
+                </g>
+                <text x="{{ node.label_x }}" y="{{ node.y + 3.5 }}" text-anchor="{{ node.label_anchor }}" class="project-call-label">{{ node.label }}</text>
+                {% endfor %}
+            </svg>
+            <div class="project-call-graph-legend">
+                {% for item in relationship_graph.relations %}<span class="relation-{{ item.key }}"><i></i>{{ item.label }}</span>{% endfor %}
+                <span class="risk-node-high"><i></i>高风险文件</span>
+                <span class="risk-node-safe"><i></i>低风险文件</span>
+                {% if relationship_graph.truncated %}<small>当前展示 {{ relationship_graph.displayed_node_count }} 个文件节点、{{ relationship_graph.displayed_edge_count }} 条关键关系</small>{% endif %}
+            </div>
+        </figure>
+        {% elif relationship_graph %}
+        <div class="empty-state project-graph-empty">本次没有解析到能够唯一指向项目内文件的调用或依赖关系</div>
+        {% else %}
+        <div class="empty-state project-graph-empty">该历史任务没有保存报告所需的节点和边；重新执行深度检测后可生成调用关系图</div>
+        {% endif %}
+    </article>
+    {% endif %}
+
+    <article class="panel motion-card report-chart-card">
+        <div class="section-title compact-title report-chart-heading"><div><h2>风险等级分布</h2></div><span class="report-chart-unit">%</span></div>
+        {% set chart = project_report_insights.risk_chart %}
+        {% if chart.total %}
+        <figure class="report-science-figure">
+            <div class="donut-chart-layout interactive-donut-layout" data-risk-donut>
+                <div class="donut-chart interactive-risk-donut" role="img" aria-label="共 {{ chart.total }} 个文件，点击风险等级可筛选项目文件">
+                    <svg viewBox="0 0 164 164" role="group" aria-label="风险等级筛选环图" focusable="false">
+                        {% for item in chart.entries %}
+                        <path class="risk-donut-segment risk-donut-segment-{{ item.key }}"
+                              d="{{ item.svg_path }}"
+                              fill="{{ item.color }}"
+                              tabindex="0"
+                              role="button"
+                              data-donut-segment
+                              data-risk-filter="{{ item.key }}"
+                              data-start-percent="{{ item.start_percent }}"
+                              data-end-percent="{{ item.end_percent }}"
+                              style="--donut-pop-x: {{ item.pop_x }}px; --donut-pop-y: {{ item.pop_y }}px;"
+                              aria-label="{{ item.label }} {{ item.value }} 个文件 {{ item.percent }}%，点击筛选该风险等级"></path>
+                        {% endfor %}
+                    </svg>
+                    <div><strong>{{ chart.total }}</strong><span>个文件</span></div>
+                </div>
+                <ul class="chart-legend">{% for item in chart.entries %}<li data-risk-donut-proxy data-risk-filter="{{ item.key }}" tabindex="0" role="button" aria-label="筛选{{ item.label }}文件"><i style="--legend-color: {{ item.color }}"></i><span>{{ item.label }}</span><strong>{{ item.value }} · {{ item.percent }}%</strong></li>{% endfor %}</ul>
+            </div>
+        </figure>
+        {% else %}<div class="empty-state compact-empty">没有可统计的文件风险等级</div>{% endif %}
+    </article>
+
+    <article class="panel motion-card report-chart-card">
+        <div class="section-title compact-title report-chart-heading"><div><h2>文件语言分布</h2></div><span class="report-chart-unit">n</span></div>
+        {% set language_chart = project_report_insights.language_chart %}
+        {% if language_chart.entries %}
+        <figure class="report-science-figure">
+            {{ categorical_columns(language_chart) }}
+        </figure>
+        {% else %}<div class="empty-state compact-empty">没有可统计的文件语言</div>{% endif %}
+    </article>
+
+    {% if project_report_insights.model_radar %}
+    <article class="panel motion-card report-chart-card report-chart-card-wide">
+        <div class="section-title compact-title report-chart-heading"><div><h2>项目模型五维性能</h2></div><span class="report-chart-unit">0–1</span></div>
+        <figure class="report-science-figure">
+            {{ model_radar(project_report_insights.model_radar) }}
+        </figure>
+    </article>
+    {% endif %}
+
+    <article class="panel motion-card report-chart-card project-top10-card">
+        <div class="section-title compact-title report-chart-heading"><div><h2>Top 10 风险类别</h2></div><span class="report-chart-unit">n</span></div>
+        {% if project_report_insights.category_rows %}
+        <figure class="report-science-figure">
+            <div class="horizontal-chart compact-bars">
+                {% for item in project_report_insights.category_rows %}<div class="horizontal-chart-row"><div><span title="{{ item.label|zh }}">{{ item.label|zh }}</span><strong>{{ item.value }}</strong></div><div class="horizontal-chart-track"><span style="width: {{ item.width }}%"></span></div></div>{% endfor %}
+            </div>
+        </figure>
+        {% else %}<div class="empty-state compact-empty">本项目没有已归类风险</div>{% endif %}
+    </article>
+
+    <article class="panel motion-card report-chart-card project-top10-card">
+        <div class="section-title compact-title report-chart-heading"><div><h2>Top 10 风险文件</h2></div><span class="report-chart-unit">0–100</span></div>
+        {% if project_report_insights.top_file_rows %}
+        <figure class="report-science-figure">
+            <div class="horizontal-chart compact-bars project-risk-file-bars">
+                {% for item in project_report_insights.top_file_rows %}<div class="horizontal-chart-row"><div><span title="{{ item.label }}">{{ item.label }}</span><strong>{{ item.value }}</strong></div><div class="horizontal-chart-track risk-bar-{{ item.risk_level }}"><span style="width: {{ item.width }}%"></span></div></div>{% endfor %}
+            </div>
+        </figure>
+        {% else %}<div class="empty-state compact-empty">没有可排行的文件结果</div>{% endif %}
+    </article>
+</section>

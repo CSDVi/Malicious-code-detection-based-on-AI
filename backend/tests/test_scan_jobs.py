@@ -69,6 +69,29 @@ def test_frequent_progress_updates_do_not_write_persistence_for_every_file():
     assert persisted[-1][0] == "completed"
 
 
+def test_file_scan_job_keeps_target_type_and_percentage_progress():
+    queue = ScanJobQueue()
+
+    def work(_cancel_event, progress):
+        progress(30, 100, "AI 模型检测中")
+        progress(100, 100, "检测完成")
+        return {"risk_score": 42, "final_decision": "unknown"}
+
+    job = queue.submit(
+        "auto",
+        "alice",
+        "sample.py",
+        work,
+        target_type="file",
+    )
+
+    assert _wait_for_status(queue, job.id, {"completed"}) == "completed"
+    completed = queue.get(job.id)
+    assert completed.target_type == "file"
+    assert completed.processed_files == 100
+    assert completed.total_files == 100
+
+
 def test_cancellable_subprocess_is_terminated_promptly():
     cancel_event = threading.Event()
     timer = threading.Timer(0.15, cancel_event.set)
@@ -275,6 +298,36 @@ def test_compact_project_job_list_does_not_parse_result_json(
 
     assert jobs[0]["id"] == "compact-job"
     assert jobs[0]["result"] is None
+
+
+def test_scan_job_list_can_filter_file_and_project_tasks(tmp_path, monkeypatch):
+    monkeypatch.setattr(database, "DB_PATH", str(tmp_path / "target-types.db"))
+    database.init_database()
+    base = {
+        "username": "alice",
+        "mode": "auto",
+        "status": "completed",
+        "created_at": "2026-08-01T00:00:00",
+    }
+    database.save_scan_job({
+        **base,
+        "id": "file-job",
+        "target_type": "file",
+        "target_name": "sample.py",
+    })
+    database.save_scan_job({
+        **base,
+        "id": "project-job",
+        "target_type": "project",
+        "target_name": "sample.zip",
+    })
+
+    assert [job["id"] for job in database.list_scan_jobs(
+        "alice", target_type="file",
+    )] == ["file-job"]
+    assert [job["id"] for job in database.list_scan_jobs(
+        "alice", target_type="project",
+    )] == ["project-job"]
 
 
 def test_project_deep_candidates_are_bounded_and_language_validated():

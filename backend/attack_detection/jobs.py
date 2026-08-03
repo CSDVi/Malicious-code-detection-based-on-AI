@@ -1,4 +1,4 @@
-"""In-process scan job queue for standard/deep project work."""
+"""In-process queue shared by file and project scans."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ class ScanJob:
     mode: str
     username: str
     target_name: str
+    target_type: str = "project"
     status: str = "queued"
     created_at: float = field(default_factory=time.time)
     started_at: float | None = None
@@ -44,10 +45,12 @@ class ScanJobQueue:
     def submit(
         self, mode: str, username: str, target_name: str, work: JobWork,
         on_update: JobUpdateCallback | None = None,
+        *, target_type: str = "project",
     ) -> ScanJob:
         job = ScanJob(
             id=uuid.uuid4().hex, mode=mode, username=username,
-            target_name=target_name, update_callback=on_update,
+            target_name=target_name, target_type=target_type,
+            update_callback=on_update,
         )
         with self._lock:
             self._jobs[job.id] = job
@@ -98,7 +101,7 @@ class ScanJobQueue:
             else:
                 cancelled_before_start = False
                 job.status = "running"
-                job.stage = "准备项目文件"
+                job.stage = "准备文件" if job.target_type == "file" else "准备项目文件"
                 job.started_at = time.time()
         self._notify(job)
         if cancelled_before_start:

@@ -12,7 +12,6 @@ from attack_detection.engines.rule_engine import RuleEngine
 from attack_detection.engines.xgb_engine import XGBoostEngine
 from attack_detection.cancellation import raise_if_cancelled
 from attack_detection.explainability import (
-    build_ai_decision_evidence,
     build_ai_explainability,
     merge_model_line_attributions,
     order_evidence_items,
@@ -146,8 +145,8 @@ class DetectionOrchestrator:
         engines, deferred_engines = self._quick_engines(
             content, language, raw_bytes, precomputed_quick_result, cancel_event,
             generate_line_attributions, precomputed_xgb,
-            run_rule_engine=True,
-            run_static_analysis=(selected != "quick"),
+            run_rule_engine=False,
+            run_static_analysis=False,
         )
         effective = "quick"
         escalation_reason = None
@@ -208,6 +207,30 @@ class DetectionOrchestrator:
         raise_if_cancelled(cancel_event)
 
         fused = fuse_engine_results(engines)
+        if fused.get("final_decision") == "malicious":
+            cached_rule = deferred_engines.get("rule_engine")
+            engines.append(
+                cached_rule
+                if cached_rule is not None
+                else self.rule_engine.scan(content, language)
+            )
+            raise_if_cancelled(cancel_event)
+            if selected != "quick":
+                cached_static = deferred_engines.get("static_evidence")
+                engines.append(
+                    cached_static
+                    if cached_static is not None
+                    else self.static_engine.scan(
+                        content,
+                        language,
+                        raw_bytes=raw_bytes,
+                    )
+                )
+                raise_if_cancelled(cancel_event)
+            # Re-fusion only collects explanation findings and disagreement
+            # diagnostics. The rule/static contracts make the AI verdict and
+            # its score invariant.
+            fused = fuse_engine_results(engines)
         legacy_ml = (
             classifier.predict(content, language)
             if run_legacy_baseline
@@ -251,14 +274,19 @@ class DetectionOrchestrator:
                 engine
                 for engine in cached
                 if (
-                    engine.get("name") in {"rule_engine", "static_evidence", "pe_static"}
+                    engine.get("name") == "pe_static"
                     or str(engine.get("name") or "").startswith("xgboost_")
                 )
             ]
             deferred = {
                 str(engine.get("name")): engine
                 for engine in cached
-                if engine.get("name") in {"hash_reputation", "isolated_sandbox"}
+                if engine.get("name") in {
+                    "hash_reputation",
+                    "isolated_sandbox",
+                    "rule_engine",
+                    "static_evidence",
+                }
             }
             if base:
                 return base, deferred
@@ -326,41 +354,28 @@ class DetectionOrchestrator:
         )
 
     def _auto_escalation_reason(self, engines: list[dict[str, Any]], content: str) -> str | None:
-        rule = next((engine for engine in engines if engine.get("name") == "rule_engine"), {})
         xgb_engines = [
             engine for engine in engines
             if str(engine.get("name", "")).startswith("xgboost_")
             and task_enabled((engine.get("metadata") or {}).get("task"))
         ]
-        if int(rule.get("risk_score") or 0) >= 65:
-            return "high-risk rule evidence triggered standard-mode escalation"
         if xgb_engines and all(engine.get("status") == "unavailable" for engine in xgb_engines):
             return "XGBoost is unavailable, so auto mode requested CodeT5+ 220M verification when possible"
         for xgb in (engine for engine in xgb_engines if engine.get("status") == "completed"):
             probability = float(xgb.get("probability") or 0.0)
             metadata = xgb.get("metadata", {})
             if metadata.get("advisory_only") and metadata.get("raw_model_decision") == "malicious":
-                return f"{xgb.get('name')} advisory fallback requested validated semantic verification"
+                return f"{xgb.get('name')} advisory result requested validated semantic AI verification"
             uncertain_low = metadata.get("uncertain_low")
             uncertain_high = metadata.get("uncertain_high")
             if uncertain_low is not None and uncertain_high is not None:
                 if float(uncertain_low) <= probability <= float(uncertain_high):
                     return f"{xgb.get('name')} probability is in its validation uncertainty band"
-        positive_decisions = {
-            str(engine.get("decision")) for engine in xgb_engines
             if (
-                engine.get("status") == "completed"
-                and not (engine.get("metadata") or {}).get("advisory_only")
-                and engine.get("decision") == "malicious"
-            )
-        }
-        rule_decision = str(rule.get("decision") or "unknown")
-        if (
-            rule
-            and positive_decisions
-            and rule_decision not in positive_decisions
-        ):
-            return "rule engine and XGBoost decisions conflict"
+                not metadata.get("advisory_only")
+                and xgb.get("decision") == "malicious"
+            ):
+                return f"{xgb.get('name')} malicious result requested semantic AI verification"
         lowered = content.lower()
         if any(token in lowered for token in ("base64", "fromcharcode", "\\x", "atob(")):
             return "obfuscation indicators triggered standard-mode escalation"
@@ -416,11 +431,9 @@ class DetectionOrchestrator:
             matches,
             engines,
         )
-        ai_decision_evidence = build_ai_decision_evidence(fused)
         evidence_items = order_evidence_items(
             matches,
             ai_only_evidence,
-            ai_decision_evidence,
         )
         bytetcn = next((engine for engine in engines if engine.get("name") == "bytetcn"), {})
         codet5p = next((engine for engine in engines if engine.get("name") == "codet5p"), {})
@@ -480,15 +493,11 @@ class DetectionOrchestrator:
                 f"AI主判：{model_names or '已验证模型'} 将文件判定为"
                 f"{'恶意' if fused.get('ai_decision') == 'malicious' else '良性'}。"
             )
-        if fused.get("rule_fallback_used"):
+        if fused.get("ai_unresolved_reason"):
             risk_reasons.append(
-                "AI无法完成可靠主判，规则已按回退策略参与结论："
-                f"{fused.get('rule_fallback_reason') or '原因未记录'}。"
-            )
-        if fused.get("rule_disagrees_with_ai"):
-            risk_reasons.append(
-                "规则命中了恶意模式，但明确的AI良性结论未被规则覆盖；"
-                "规则只保留为人工复核说明。"
+                "AI未形成可靠且一致的主判，最终结果保持为需复核；"
+                "规则不会替代AI下结论："
+                f"{fused.get('ai_unresolved_reason')}。"
             )
         risk_reasons.extend(
             f"{match['rule_id']}: {match['description']}"
@@ -506,7 +515,7 @@ class DetectionOrchestrator:
                 f"VirusTotal hash reputation: malicious={reputation_metadata.get('malicious', 0)}, suspicious={reputation_metadata.get('suspicious', 0)}; hash evidence requires review"
             )
         if not risk_reasons:
-            risk_reasons = ["No high-risk rule evidence or executable positive model decision was found."]
+            risk_reasons = ["AI模型未形成可执行的恶意判定。"]
         suggestions = []
         seen_suggestions: set[str] = set()
         for match in matches:
@@ -521,9 +530,9 @@ class DetectionOrchestrator:
                 suggestions.append(
                     "先隔离该文件并结合调用链人工复核；当前没有规则命中可用于生成更具体的修复步骤。"
                 )
-            elif fused.get("rule_fallback_used"):
+            elif fused.get("final_decision") == "unknown":
                 suggestions.append(
-                    "AI本次未形成可靠结论，请结合调用链、业务上下文和规则证据人工复核。"
+                    "AI本次未形成可靠结论，请结合调用链和业务上下文人工复核；规则提示不能替代AI结论。"
                 )
             else:
                 suggestions.append("保持依赖版本锁定，审查代码变更，并使用最小权限运行配置。")
@@ -545,10 +554,12 @@ class DetectionOrchestrator:
                 attack_techniques.append(technique)
         engine_votes = {
             "rule_engine": {
-                "decision": next((engine.get("decision") for engine in engines if engine.get("name") == "rule_engine"), "unknown"),
+                "decision": "not_applicable",
                 "malicious_hits": type_counts["malicious"],
                 "vulnerability_hits": type_counts["vulnerable"],
                 "hits": len(matches),
+                "role": "explanation_only",
+                "affects_final_decision": False,
             },
             "xgboost": {
                 str(engine.get("metadata", {}).get("task") or engine.get("name")): engine
@@ -564,7 +575,7 @@ class DetectionOrchestrator:
             "malicious_model": malicious_ml,
             "vulnerability_model": vulnerability_ml,
             "policy": {
-                "decision": "ai_primary_rule_explanation_and_conditional_fallback",
+                "decision": "ai_authoritative_rule_explanation_only",
                 "vulnerability_model": "disabled",
             },
         }
@@ -602,6 +613,8 @@ class DetectionOrchestrator:
             "ai_conflict": fused.get("ai_conflict", False),
             "ai_uncertain": fused.get("ai_uncertain", False),
             "ai_model_states": fused.get("ai_model_states", []),
+            "ai_unresolved_reason": fused.get("ai_unresolved_reason"),
+            "rules_role": "explanation_only",
             "rule_fallback_used": fused.get("rule_fallback_used", False),
             "rule_fallback_reason": fused.get("rule_fallback_reason"),
             "rule_disagrees_with_ai": fused.get(
@@ -610,7 +623,7 @@ class DetectionOrchestrator:
             ),
             "confidence": None,
             "engines": engines,
-            "findings": fused["findings"],
+            "findings": matches,
             "escalation_reason": escalation_reason,
             "matches": matches,
             "categories": categories,
@@ -658,7 +671,7 @@ class DetectionOrchestrator:
                 "pe_static": any(engine.get("name") == "pe_static" for engine in engines),
             },
             "explainability": {
-                "score_formula": "risk_score is an AI-first triage score, not a calibrated probability",
+                "score_formula": "risk_score is computed from AI model output only and is not a calibrated probability",
                 "decision_basis": fused.get("decision_basis"),
                 "decision_authority": fused.get("decision_authority"),
                 "rule_fallback_used": fused.get(
@@ -668,8 +681,11 @@ class DetectionOrchestrator:
                 "rule_fallback_reason": fused.get(
                     "rule_fallback_reason",
                 ),
-                "malicious_rule_weight": severity_by_type["malicious"],
-                "vulnerability_rule_weight": severity_by_type["vulnerable"],
+                "rules_role": "explanation_only",
+                "rules_affect_final_decision": False,
+                "rules_affect_risk_score": False,
+                "malicious_explanation_severity": severity_by_type["malicious"],
+                "vulnerability_explanation_severity": severity_by_type["vulnerable"],
                 "vulnerability_model_enabled": False,
             },
         }
@@ -681,14 +697,7 @@ def _rule_explanations_for_decision(
 ) -> list[dict[str, Any]]:
     """Expose rules as explanations, not contrary malicious verdicts."""
 
-    if fused.get("ai_decision") != "benign":
-        return matches
-    if fused.get("final_decision") == "vulnerable":
-        return [
-            match for match in matches
-            if match.get("risk_type") == "vulnerable"
-        ]
-    return []
+    return matches if fused.get("final_decision") == "malicious" else []
 
 
 def _skipped_legacy_baseline() -> dict[str, Any]:
@@ -746,6 +755,7 @@ def _normalize_finding(item: dict[str, Any], content: str, language: str) -> dic
     finding["remediation_references"] = remediation["references"]
     finding["owasp_category"] = remediation["owasp"]
     finding["cwe"] = remediation["cwe"] or finding.get("cwe")
+    finding["cve_examples"] = remediation.get("cve_examples") or []
     if finding.get("suspicion_score") is None:
         finding["suspicion_score"] = severity * 10
         finding["suspicion_basis"] = "由规则严重度换算，不是模型概率"
@@ -772,12 +782,6 @@ def _code_context(content: str, line_value: object, radius: int = 2) -> list[dic
     ]
 
 
-def _combined_risk_score(model_probability: float | None, rule_severity: int) -> int:
-    model_score = int(float(model_probability) * 100) if model_probability is not None else 0
-    rule_score = min(95, int(rule_severity * 7.5)) if rule_severity else 0
-    return max(model_score, rule_score)
-
-
 def _task_view(engine: dict[str, Any], rule_hits: int) -> dict[str, Any]:
     completed = engine.get("status") == "completed" and engine.get("probability") is not None
     metadata = engine.get("metadata") or {}
@@ -793,6 +797,7 @@ def _task_view(engine: dict[str, Any], rule_hits: int) -> dict[str, Any]:
         "reason": engine.get("reason") or engine.get("error"),
         "engine": engine.get("name"),
         "rule_hits": rule_hits,
+        "rule_hits_role": "explanation_only",
         "advisory_only": advisory_only,
         "advisory_reason": metadata.get("advisory_reason"),
         "raw_model_decision": metadata.get("raw_model_decision"),

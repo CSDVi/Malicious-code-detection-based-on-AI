@@ -2,23 +2,36 @@
 {% block title %}系统总览 - 獬豸安码{% endblock %}
 {% block body_class %}dashboard-home{% endblock %}
 {% block content %}
-<main class="landing-page">
-    <section class="hero-shell" aria-labelledby="hero-title">
+<main class="landing-page" data-landing-motion data-opening-enabled="{{ 'true' if show_opening else 'false' }}">
+    {% if show_opening %}
+    <div class="opening-curtain" data-opening-curtain aria-hidden="true">
+        <div class="opening-curtain-grid"></div>
+        <div class="opening-lockup">
+            <div class="opening-word-mask">
+                <span class="opening-word" data-opening-word>獬豸安码</span>
+            </div>
+            <span class="opening-rule" data-opening-rule></span>
+        </div>
+    </div>
+    {% endif %}
+
+    <section class="hero-shell" aria-labelledby="hero-title" data-opening-scene>
         <div class="hero-pattern" aria-hidden="true"></div>
         <div class="hero-copy">
-            <h1 id="hero-title" class="hero-brand-title"><span class="hero-brand-xiezhi">獬豸</span><span class="hero-brand-anma">安码</span></h1>
-            <div class="hero-actions" aria-label="检测入口">
-                <a class="hero-action-card" href="{{ url_for('attack.index') }}">
-                    <span><strong>单文件检测</strong></span>
+            <h1 id="hero-title" class="hero-brand-title"><span class="hero-brand-xiezhi" data-opening-title>獬豸</span><span class="hero-brand-anma" data-opening-title>安码</span></h1>
+            <div class="hero-actions" aria-label="检测入口" data-opening-content>
+                <a class="hero-action-card" href="{{ url_for('attack.index') }}" data-page-transition>
+                    <span class="hero-action-icon" aria-hidden="true"><i class="bi bi-file-earmark-code"></i></span>
+                    <span class="hero-action-copy"><strong>文件检测</strong></span>
                 </a>
-                <a class="hero-action-card" href="{{ url_for('attack.project_scan') }}">
-                    <span><strong>项目检测</strong></span>
+                <a class="hero-action-card" href="{{ url_for('attack.project_scan') }}" data-page-transition>
+                    <span class="hero-action-icon" aria-hidden="true"><i class="bi bi-file-earmark-zip"></i></span>
+                    <span class="hero-action-copy"><strong>项目检测</strong></span>
                 </a>
             </div>
-
         </div>
 
-        <div class="hero-visual" aria-label="可随指针扩散与凝聚的獬豸粒子云" data-particle-scene data-model-url="{{ url_for('static', filename='models/xiezhi.glb') }}" data-particle-data-url="{{ url_for('static', filename='models/xiezhi-particles-v1.bin') }}" data-model-revision="gold-interaction-v1">
+        <div class="hero-visual" aria-label="可随指针扩散与凝聚的獬豸粒子云" data-opening-visual data-particle-scene data-model-url="{{ url_for('static', filename='models/xiezhi.glb') }}" data-particle-data-url="{{ url_for('static', filename='models/xiezhi-particles-v1.bin') }}" data-model-revision="gold-interaction-v1">
             <canvas id="xiezhi-particle-canvas"></canvas>
             <div class="visual-vignette"></div>
             <div class="particle-cursor-ripple" data-particle-ripple aria-hidden="true"></div>
@@ -35,7 +48,7 @@
             <div class="visual-orbit orbit-two"></div>
         </div>
 
-        <div class="recent-stack">
+        <div class="recent-stack" data-opening-content>
             <section class="recent-panel" aria-labelledby="recent-title">
                 <div class="recent-panel-head">
                     <h2 id="recent-title">最近检测记录</h2>
@@ -44,7 +57,7 @@
                 <div class="recent-table">
                     <div class="recent-row recent-row-head"><span>对象</span><span>风险</span><span>模式</span><span>时间</span></div>
                     {% for item in recent_records[:4] %}
-                    <a class="recent-row" href="{% if item.record_type == 'project' %}{{ url_for('attack.project_scan', job_id=item.id) }}{% else %}{{ url_for('attack.record', record_id=item.id) }}{% endif %}">
+                    <a class="recent-row" href="{% if item.record_type == 'project' %}{{ url_for('attack.project_scan', job_id=item.id) }}{% else %}{{ url_for('attack.record', record_id=item.id) }}{% endif %}" data-page-transition>
                         <span class="recent-file">
                             <b class="recent-kind recent-kind-{{ item.record_type }}">{{ item.record_type_label }}</b>
                             <strong>{{ item.target_name }}</strong>
@@ -64,6 +77,8 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{{ url_for('static', filename='vendor/gsap/gsap.min.js') }}?v=3.13.0"></script>
+<script src="{{ url_for('static', filename='js/landing-motion.js') }}?v=20260731-opening-unclipped"></script>
 <script type="importmap">
 {
     "imports": {

@@ -18,6 +18,47 @@ CATALOG_PATHS = (
 )
 MAX_SUGGESTIONS_PER_FINDING = 2
 
+# Curated same-weakness examples. These are educational references, never a
+# claim that the scanned file is the affected product or implements that CVE.
+CVE_EXAMPLES_BY_CWE: dict[str, tuple[dict[str, str], ...]] = {
+    "CWE-22": ({
+        "id": "CVE-2021-41773",
+        "title": "Apache HTTP Server 路径穿越案例",
+        "summary": "路径规范化缺陷允许访问 Alias 目录之外的文件，特定配置下还可能导致远程代码执行。",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-41773",
+    },),
+    "CWE-78": ({
+        "id": "CVE-2014-6271",
+        "title": "GNU Bash Shellshock 命令注入案例",
+        "summary": "Bash 处理特制环境变量时执行了附加命令，属于操作系统命令注入。",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2014-6271",
+    },),
+    "CWE-79": ({
+        "id": "CVE-2020-11022",
+        "title": "jQuery DOM 操作 XSS 案例",
+        "summary": "将不可信 HTML 传入特定 DOM 操作方法时可能执行非预期脚本。",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-11022",
+    },),
+    "CWE-89": ({
+        "id": "CVE-2023-34362",
+        "title": "MOVEit Transfer SQL 注入案例",
+        "summary": "未授权攻击者可利用 SQL 注入访问或修改 MOVEit Transfer 数据库内容。",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-34362",
+    },),
+    "CWE-502": ({
+        "id": "CVE-2015-4852",
+        "title": "Oracle WebLogic 不可信反序列化案例",
+        "summary": "对不可信数据进行反序列化，可被利用实现远程代码执行。",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2015-4852",
+    },),
+    "CWE-918": ({
+        "id": "CVE-2021-26855",
+        "title": "Microsoft Exchange SSRF 案例",
+        "summary": "服务端请求伪造可被用于访问 Exchange 后端资源，并成为后续攻击链入口。",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-26855",
+    },),
+}
+
 
 @lru_cache(maxsize=1)
 def load_remediation_catalog() -> dict[str, Any]:
@@ -57,12 +98,14 @@ def remediation_for_finding(
     category = str(finding.get("category") or "")
     entry = (catalog.get("entries") or {}).get(category)
     if not isinstance(entry, dict):
+        cwe = finding.get("cwe")
         suggestions = _unique_texts([fallback, finding.get("repair_advice")])
         return {
             "suggestions": suggestions[:MAX_SUGGESTIONS_PER_FINDING],
             "references": [],
             "owasp": None,
-            "cwe": finding.get("cwe"),
+            "cwe": cwe,
+            "cve_examples": cve_examples_for_cwe(cwe),
         }
 
     language_map = entry.get("language_suggestions") or {}
@@ -94,12 +137,28 @@ def remediation_for_finding(
             "title": str(source.get("title") or source_id),
             "url": str(source["url"]),
         })
+    cwe = entry.get("cwe") or finding.get("cwe")
     return {
         "suggestions": suggestions[:MAX_SUGGESTIONS_PER_FINDING],
         "references": references,
         "owasp": entry.get("owasp"),
-        "cwe": entry.get("cwe") or finding.get("cwe"),
+        "cwe": cwe,
+        "cve_examples": cve_examples_for_cwe(cwe),
     }
+
+
+def cve_examples_for_cwe(cwe: object) -> list[dict[str, str]]:
+    """Return curated examples without asserting identity with the finding."""
+
+    examples = CVE_EXAMPLES_BY_CWE.get(str(cwe or "").upper(), ())
+    return [
+        {
+            **dict(example),
+            "relationship": "same_weakness_example",
+            "disclaimer": "同类公开案例，不代表当前文件就是该 CVE。",
+        }
+        for example in examples
+    ]
 
 
 def catalog_statistics() -> dict[str, int]:

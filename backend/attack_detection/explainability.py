@@ -48,86 +48,21 @@ def build_ai_explainability(
         "rule_fallback_reason": decision_summary.get(
             "rule_fallback_reason",
         ),
+        "ai_unresolved_reason": decision_summary.get(
+            "ai_unresolved_reason",
+        ),
+        "rules_role": "explanation_only",
         "xgboost": _engine_summary(engines, "xgboost_malicious"),
         "codet5p": _engine_summary(engines, "codet5p"),
-    }
-
-
-def build_ai_decision_evidence(
-    decision_summary: dict[str, Any],
-) -> dict[str, Any] | None:
-    """Create one file-level card that makes AI decision authority explicit."""
-
-    decision = decision_summary.get("ai_decision")
-    # Evidence cards explain a positive malicious conclusion. A benign AI
-    # decision remains visible in the AI summary without creating a fake
-    # "risk evidence" card.
-    if decision != "malicious":
-        return None
-    states = [
-        state for state in decision_summary.get("ai_model_states") or []
-        if isinstance(state, dict) and state.get("decisive")
-    ]
-    if not states:
-        return None
-    model_names = [
-        str(state.get("name") or "AI")
-        for state in states
-    ]
-    probability = max(
-        float(state.get("probability") or 0.0)
-        for state in states
-    )
-    threshold_details = "；".join(
-        (
-            f"{state.get('name')} 概率 "
-            f"{float(state.get('probability') or 0.0) * 100:.1f}%"
-            f"（阈值 {float(state.get('threshold') or 0.5) * 100:.1f}%）"
-        )
-        for state in states
-    )
-    return {
-        "source": "ai_decision",
-        "rule_id": None,
-        "risk_type": "malicious",
-        "category": "AI 恶意文件主判",
-        "severity": None,
-        "description": "AI 模型将该文件判定为恶意。",
-        "harm": (
-            "模型识别到与训练集中恶意代码相符的文件级语义或行为特征；"
-            "具体高贡献行由XGBoost逐行遮挡归因定位；规则与静态分析"
-            "仅在AI无法可靠判断时作为回退证据。"
-        ),
-        "repair_advice": None,
-        "repair_suggestions": [],
-        "remediation_references": [],
-        "owasp_category": None,
-        "api_security_category": None,
-        "risk_domains": ["AI 文件级判定"],
-        "cwe": None,
-        "line": None,
-        "snippet": "",
-        "code_context": [],
-        "suspicion_score": round(probability * 100, 1),
-        "suspicion_basis": "模型文件级恶意概率与各自发布阈值",
-        "evidence_basis": "ai_decision",
-        "basis_text": (
-            f"最终恶意性由 {'、'.join(model_names)} 主判。"
-            f"{threshold_details}。规则与静态分析未参与覆盖该AI结论，"
-            "仅在AI无法可靠判断时回退。"
-        ),
-        "ai_attribution": None,
-        "ai_model_states": states,
     }
 
 
 def order_evidence_items(
     rule_evidence: list[dict[str, Any]],
     ai_only_evidence: list[dict[str, Any]],
-    ai_decision_evidence: dict[str, Any] | None = None,
     limit: int = 20,
 ) -> list[dict[str, Any]]:
-    """Keep AI authority visible before rule explanations."""
+    """Order only line/file localization items, not the file-level verdict."""
 
     corroborated = [
         item for item in rule_evidence
@@ -138,7 +73,6 @@ def order_evidence_items(
         if item.get("evidence_basis") != "ai_and_rule"
     ]
     ordered = [
-        *([ai_decision_evidence] if ai_decision_evidence else []),
         *corroborated,
         *ai_only_evidence,
         *rule_only,
@@ -168,6 +102,23 @@ def merge_model_line_attributions(
     used: set[int] = set()
     for item in evidence_items:
         shaped = dict(item)
+        trace_steps = []
+        for raw_step in shaped.get("trace_steps") or []:
+            if not isinstance(raw_step, dict):
+                continue
+            step = dict(raw_step)
+            step_index = _nearest_attribution_index(
+                _line_number(step.get("line")),
+                attributions,
+            )
+            if step_index is not None:
+                attribution = dict(attributions[step_index])
+                step["ai_supported"] = True
+                step["ai_attribution"] = attribution
+                used.add(step_index)
+            trace_steps.append(step)
+        if trace_steps:
+            shaped["trace_steps"] = trace_steps
         line = _line_number(shaped.get("line"))
         nearest_index = _nearest_attribution_index(line, attributions)
         if nearest_index is None:
@@ -179,7 +130,7 @@ def merge_model_line_attributions(
         shaped["evidence_basis"] = "ai_and_rule"
         shaped["basis_text"] = (
             "XGBoost逐行遮挡显示该位置会提高模型风险分，"
-            "并且同一位置存在独立规则或静态证据。"
+            "并且同一位置存在规则或静态解释证据；最终恶意结论仍只来自AI。"
         )
         output.append(shaped)
 
@@ -244,7 +195,7 @@ def _with_rule_only_basis(item: dict[str, Any]) -> dict[str, Any]:
     shaped.setdefault("evidence_basis", "rule_only")
     shaped.setdefault(
         "basis_text",
-        "该位置命中了可复核的规则或静态分析证据；模型没有把它列入前五个贡献位置。",
+        "该位置命中了规则或静态分析解释证据；它用于说明行为与修复方式，不参与最终恶意判定或风险分。",
     )
     return shaped
 

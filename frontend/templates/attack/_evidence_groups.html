@@ -1,0 +1,61 @@
+<section class="evidence-section section-block">
+    <div class="section-title compact-title">
+        <div><h2>恶意点定位与解释</h2></div>
+        <span class="evidence-count">{{ evidence_total }} 条</span>
+    </div>
+    <div class="evidence-list evidence-group-list">
+        {% for group in evidence_groups %}
+        {% set group_number = loop.index %}
+        <article class="evidence-item evidence-group motion-card">
+            <header class="evidence-group-head">
+                <div>
+                    <strong>{{ group.category|zh }}</strong>
+                    <span>{% if group.cwe %}{{ group.cwe }} · {% endif %}共 {{ group.count }} 处</span>
+                </div>
+                {% if group.owasp_category or group.api_security_category %}
+                <small>{% if group.owasp_category %}{{ group.owasp_category }}{% endif %}{% if group.owasp_category and group.api_security_category %} · {% endif %}{% if group.api_security_category %}{{ group.api_security_category }}{% endif %}</small>
+                {% endif %}
+            </header>
+
+            <div class="evidence-occurrence-list">
+                {% for evidence in group["items"] %}
+                <section class="evidence-occurrence" id="evidence-{{ group_number }}-{{ loop.index }}">
+                    <header class="evidence-head evidence-occurrence-head">
+                        <div>
+                            <strong>{% if evidence.line %}第 {{ evidence.line }} 行{% else %}文件级解释{% endif %}</strong>
+                            {% if evidence.rule_id %}<span>{{ evidence.rule_id }}</span>{% endif %}
+                        </div>
+                        <span class="suspicion-badge">可疑度 {% if evidence.suspicion_score is defined and evidence.suspicion_score is not none %}{{ evidence.suspicion_score }}/100{% else %}未评分{% endif %}</span>
+                    </header>
+                    {% if evidence.code_context %}
+                    <pre class="evidence-code">{% for row in evidence.code_context %}<span class="{% if row.is_target %}target-line{% endif %}"><b>{{ row.line }}</b><code>{{ row.code }}</code></span>{% endfor %}</pre>
+                    {% elif evidence.snippet %}
+                    <pre class="evidence-code"><span class="target-line"><b>{{ evidence.line or '—' }}</b><code>{{ evidence.snippet }}</code></span></pre>
+                    {% endif %}
+                    {% if evidence.decoded_preview %}<div class="evidence-decoded"><strong>静态还原</strong><code>{{ evidence.decoded_preview }}</code><small>{{ evidence.decoded_encoding or '编码字面量' }} · 仅解码展示，未执行代码</small></div>{% endif %}
+                    {% include "attack/_evidence_trace.html" %}
+                </section>
+                {% endfor %}
+            </div>
+
+            <div class="evidence-group-summary">
+                {% set evidence = group %}{% include "attack/_weakness_examples.html" %}
+                <div class="evidence-group-guidance-grid">
+                    <div>
+                        <strong>危害</strong>
+                        {% if group.harms %}<ul>{% for harm in group.harms %}<li>{{ harm }}</li>{% endfor %}</ul>{% else %}<p>当前没有可可靠归纳的危害说明。</p>{% endif %}
+                        {% if group.risk_domains %}<small>风险范围：{{ group.risk_domains|join('、') }}</small>{% endif %}
+                    </div>
+                    <div class="evidence-remediation">
+                        <strong>修复建议</strong>
+                        {% if group.repair_suggestions %}<ol>{% for suggestion in group.repair_suggestions %}<li>{{ suggestion }}</li>{% endfor %}</ol>{% else %}<p>结合命中位置及上下文进行人工复核，并按最小权限原则限制敏感操作。</p>{% endif %}
+                        {% if group.remediation_references %}<div class="advice-sources compact-advice-sources"><span>建议依据</span>{% for reference in group.remediation_references %}<a href="{{ reference.url }}" target="_blank" rel="noopener noreferrer">{{ reference.title }}</a>{% endfor %}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </article>
+        {% else %}
+        <div class="empty-state evidence-empty"><span>{{ evidence_empty_message }}</span></div>
+        {% endfor %}
+    </div>
+</section>

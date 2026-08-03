@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from attack_detection.source_masking import mask_non_executable_text
+
 
 @dataclass(frozen=True)
 class DetectionRule:
@@ -24,7 +26,7 @@ class DetectionRule:
 
 RULES: tuple[DetectionRule, ...] = (
     DetectionRule("SQL-001", "vulnerable", "SQL Injection", 8, r"(?i)(select|union|insert|update|delete).+(from|where).*(\+|\$|request|args|get|post|params)", "发现疑似将用户输入直接拼接进 SQL 的行为。", "使用参数化查询或 ORM 参数绑定。", "CWE-89"),
-    DetectionRule("SQL-002", "vulnerable", "SQL Injection", 9, r"(?i)(or|and)\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+|union\s+select|sleep\s*\(|benchmark\s*\(", "发现常见 SQL 注入载荷特征。", "校验输入类型，并为数据库账户配置最小权限。", "CWE-89"),
+    DetectionRule("SQL-002", "vulnerable", "SQL Injection", 9, r"(?i)(?:\b(?:or|and)\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+|\bunion\s+select\b|\b(?:select|union|where|and|or)\b.{0,160}\b(?:sleep|benchmark)\s*\()", "发现常见 SQL 注入载荷特征。", "校验输入类型，并为数据库账户配置最小权限。", "CWE-89"),
     DetectionRule("XSS-001", "vulnerable", "XSS", 8, r"(?i)<script|javascript:|onerror\s*=|onload\s*=", "发现脚本标签、事件属性或 javascript: URL。", "按输出上下文编码内容，并启用内容安全策略。", "CWE-79"),
     DetectionRule("XSS-002", "vulnerable", "XSS", 7, r"(?i)(innerHTML|document\.write|dangerouslySetInnerHTML).*(request|location|cookie|params|query|hash)", "不可信数据可能被直接写入 HTML 或 DOM。", "使用 textContent 或可信的模板净化组件。", "CWE-79"),
     DetectionRule("WS-001", "malicious", "WebShell", 10, r"(?i)(eval|assert|preg_replace)\s*\(\s*(\$_POST|\$_GET|\$_REQUEST|request\.)", "请求数据被动态执行，符合网页后门入口特征。", "删除动态执行入口，并审查访问日志。", "CWE-94", ("php", "python", "javascript", "unknown")),
@@ -54,13 +56,13 @@ RULES: tuple[DetectionRule, ...] = (
         ("python", "unknown"),
     ),
     DetectionRule("SSRF-001", "vulnerable", "SSRF", 8, r"(?i)(requests\.get|urllib\.request\.urlopen|fetch|axios\.get|curl_exec|http\.Get)\s*\(.{0,120}(url|request|args|params|\$_GET|\$_POST)", "服务端请求地址可能受外部输入控制。", "使用 URL 白名单，并阻断内网与云元数据地址。", "CWE-918"),
-    DetectionRule("SSRF-002", "vulnerable", "SSRF", 9, r"(?i)(169\.254\.169\.254|metadata\.google\.internal|localhost|127\.0\.0\.1|0\.0\.0\.0)", "发现云元数据地址或回环地址。", "在出站请求中阻断元数据网段和本地地址。", "CWE-918"),
+    DetectionRule("SSRF-002", "vulnerable", "SSRF", 9, r"(?i)(?:(?:requests?\.(?:get|post)|urllib\.request\.urlopen|fetch|axios\.(?:get|post)|curl_exec|http\.(?:Get|Post)|Invoke-WebRequest).{0,160}(?:169\.254\.169\.254|metadata\.google\.internal|localhost|127\.0\.0\.1)|(?:169\.254\.169\.254|metadata\.google\.internal|localhost|127\.0\.0\.1).{0,160}(?:requests?\.(?:get|post)|urllib\.request\.urlopen|fetch|axios\.(?:get|post)|curl_exec|http\.(?:Get|Post)|Invoke-WebRequest))", "出站请求直接访问云元数据地址或回环地址。", "在出站请求中阻断元数据网段和本地地址。", "CWE-918"),
     DetectionRule("PATH-001", "vulnerable", "Path Traversal", 8, r"(?i)(\.\./|\.\.\\|send_file|open\s*\(|readFileSync|FileInputStream).{0,120}(request|args|params|get|post|\$_GET|\$_POST)", "文件路径可能受用户输入控制。", "在固定根目录下解析路径，并验证最终路径仍位于根目录内。", "CWE-22"),
     DetectionRule("DESER-001", "vulnerable", "Unsafe Deserialization", 9, r"(?i)(pickle\.loads|yaml\.load\s*\(|ObjectInputStream|unserialize\s*\(|readObject\s*\()", "不安全反序列化可能实例化攻击者控制的对象。", "改用安全数据格式，或强制校验签名与类型白名单。", "CWE-502"),
     DetectionRule("SECRET-001", "vulnerable", "Secret Exposure", 7, r"(?i)(api[_-]?key|secret|password|passwd|token|access[_-]?key)\s*[:=]\s*['\"][^'\"]{8,}", "发现疑似硬编码密钥或令牌。", "将密钥迁移到环境变量或密钥管理服务，并轮换已暴露凭据。", "CWE-798"),
     DetectionRule("DL-001", "suspicious", "Download or Remote Load", 8, r"(?i)(curl|wget|Invoke-WebRequest|urllib\.request|requests\.get|fetch|axios\.get)\s*\(?[\"']https?://", "代码从远程地址下载或加载内容，单独不足以证明恶意意图。", "限制可信域名，验证哈希或签名，并禁止下载后立即执行。", "CWE-494"),
-    DetectionRule("DL-002", "malicious", "Download and Execute", 9, r"(?i)(chmod\s+\+x|Start-Process|ProcessBuilder|subprocess|exec).{0,120}(http|download|tmp|curl|wget)", "发现下载后执行或修改执行权限的调用链。", "分离下载与执行流程，强制签名验证并在沙箱中运行。", "CWE-494"),
-    DetectionRule("OBF-001", "suspicious", "Obfuscated Payload", 6, r"(?i)(chr\s*\(|String\.fromCharCode|\\x[0-9a-f]{2}|atob\s*\(|btoa\s*\(|base64_decode|fromCharCode)", "编码、字符拼接或 Base64 操作可能用于隐藏载荷，单独不足以证明恶意意图。", "发布前解码并人工审查载荷内容。", "CWE-506"),
+    DetectionRule("DL-002", "malicious", "Download and Execute", 9, r"(?i)(?:chmod\s+\+x\b|Start-Process\b|ProcessBuilder\s*\(|subprocess(?:\.\w+)?|(?<![\w.])exec\s*(?:\(|\s)).{0,120}(?:https?://|\bdownload\w*\b|\btmp\b|\bcurl\b|\bwget\b)", "发现下载后执行或修改执行权限的调用链。", "分离下载与执行流程，强制签名验证并在沙箱中运行。", "CWE-494"),
+    DetectionRule("OBF-001", "suspicious", "Obfuscated Payload", 6, r"(?i)(chr\s*\(|String\.fromCharCode|atob\s*\(|btoa\s*\(|base64_decode|fromCharCode)", "代码主动执行字符拼接或 Base64 转换，可能用于隐藏载荷；单独不足以证明恶意意图。", "发布前解码并人工审查载荷内容。", "CWE-506"),
     DetectionRule("SUPPLY-001", "malicious", "Install Hook Execution", 9, r'(?i)["\']?(preinstall|postinstall|prepare)["\']?\s*:\s*["\'][^"\']*(curl|wget|powershell|child_process|node\s+-e|python\s+-c)', "软件包安装钩子启动了下载器或解释器。", "删除安装阶段的执行逻辑，并审查发布版本差异。", "CWE-506", ("javascript", "config", "unknown")),
     DetectionRule("EXFIL-001", "malicious", "Credential Exfiltration", 10, r"(?i)(discord(app)?\.com/api/webhooks|api\.telegram\.org|webhook).{0,180}(token|secret|password|cookie|process\.env|\.ssh|\.npmrc|pypirc)", "代码疑似将凭据或本地密钥发送到 Webhook 地址。", "删除外传路径，轮换已暴露凭据，并审计软件包使用方。", "CWE-522"),
     DetectionRule("EXFIL-002", "malicious", "Credential Collection", 9, r"(?i)(process\.env|os\.environ|\.npmrc|pypirc|id_rsa|login data|local state).{0,160}(fetch|axios|requests|urllib|http|socket|webhook)", "本地凭据收集行为与出站网络操作同时出现。", "删除凭据收集与外传逻辑，并轮换受影响密钥。", "CWE-522"),
@@ -226,7 +228,8 @@ _COMPILED_RULES = tuple(
 
 def detect_by_rules(content: str, language: str) -> list[dict[str, object]]:
     matches: list[dict[str, object]] = []
-    lines = content.splitlines()
+    executable_content = mask_non_executable_text(content, language)
+    lines = executable_content.splitlines()
     for rule, regex in _COMPILED_RULES:
         if language not in rule.languages and "unknown" not in rule.languages:
             continue
@@ -234,7 +237,7 @@ def detect_by_rules(content: str, language: str) -> list[dict[str, object]]:
         # match, avoiding one regex call per line for the common absent-rule
         # case.  Positive rules retain the established line-by-line matching
         # and therefore the same findings and line numbers.
-        if not regex.search(content):
+        if not regex.search(executable_content):
             continue
         for line_no, line in enumerate(lines, start=1):
             if regex.search(line):
@@ -251,15 +254,41 @@ def detect_by_rules(content: str, language: str) -> list[dict[str, object]]:
                     "snippet": line.strip()[:180],
                 })
     if not any(item.get("category") == "SQL Injection" for item in matches):
-        dataflow = _sql_injection_dataflow(content, language)
+        dataflow = _sql_injection_dataflow(executable_content, language)
         if dataflow:
             matches.append(dataflow)
     if language == "java" and not any(item.get("category") == "Path Traversal" for item in matches):
-        dataflow = _java_path_traversal_dataflow(content)
+        dataflow = _java_path_traversal_dataflow(executable_content)
         if dataflow:
             matches.append(dataflow)
-    matches.extend(_exception_handling_findings(content, language))
+    matches.extend(_exception_handling_findings(executable_content, language))
+    _restore_original_snippets(matches, content)
     return matches
+
+
+def _restore_original_snippets(
+    findings: list[dict[str, object]],
+    content: str,
+) -> None:
+    """Restore report snippets after detection on coordinate-preserving masks."""
+
+    original_lines = content.splitlines()
+    for finding in findings:
+        _restore_snippet(finding, original_lines)
+        trace_steps = finding.get("trace_steps")
+        if isinstance(trace_steps, list):
+            for step in trace_steps:
+                if isinstance(step, dict):
+                    _restore_snippet(step, original_lines)
+
+
+def _restore_snippet(item: dict[str, object], original_lines: list[str]) -> None:
+    try:
+        line = int(item.get("line") or 0)
+    except (TypeError, ValueError):
+        return
+    if 1 <= line <= len(original_lines):
+        item["snippet"] = original_lines[line - 1].strip()[:180]
 
 
 _ASSIGNMENT = re.compile(
@@ -340,6 +369,14 @@ def _sql_injection_dataflow(content: str, language: str) -> dict[str, object] | 
         )
         if not (direct_dynamic_sql or referenced_query or direct_tainted_query):
             continue
+        trace_steps = _sql_trace_steps(
+            assignments,
+            source_pattern,
+            tainted,
+            query_values,
+            line_number,
+            line,
+        )
         return {
             "source": "rule_engine",
             "rule_id": "SQL-003",
@@ -351,6 +388,7 @@ def _sql_injection_dataflow(content: str, language: str) -> dict[str, object] | 
             "cwe": "CWE-89",
             "line": line_number,
             "snippet": line.strip()[:180],
+            "trace_steps": trace_steps,
         }
     return None
 
@@ -368,6 +406,58 @@ def _looks_dynamically_built(expression: str) -> bool:
     )
 
 
+def _sql_trace_steps(
+    assignments: list[tuple[int, str, str, str]],
+    source_pattern: re.Pattern[str],
+    tainted: set[str],
+    query_values: set[str],
+    sink_line: int,
+    sink_snippet: str,
+) -> list[dict[str, object]]:
+    """Summarize the conservative static SQL flow without claiming runtime proof."""
+
+    candidates = []
+    for line_number, variable, expression, snippet in assignments:
+        if line_number > sink_line:
+            continue
+        if source_pattern.search(expression):
+            kind, stage = "source", "外部输入进入变量"
+        elif variable in query_values:
+            kind, stage = "propagation", "动态 SQL 构造或传播"
+        elif variable in tainted:
+            kind, stage = "propagation", "不可信数据传播"
+        else:
+            continue
+        candidates.append({
+            "kind": kind,
+            "stage": stage,
+            "line": line_number,
+            "snippet": snippet[:180],
+        })
+    sources = [item for item in candidates if item["kind"] == "source"]
+    propagation = [item for item in candidates if item["kind"] == "propagation"]
+    selected = sources[:1] + propagation[-3:]
+    selected.append({
+        "kind": "sink",
+        "stage": "数据库执行接口",
+        "line": sink_line,
+        "snippet": sink_snippet.strip()[:180],
+    })
+    return _deduplicate_trace_steps(selected)
+
+
+def _deduplicate_trace_steps(steps: list[dict[str, object]]) -> list[dict[str, object]]:
+    output = []
+    seen = set()
+    for step in sorted(steps, key=lambda item: int(item.get("line") or 0)):
+        key = (step.get("line"), step.get("snippet"))
+        if key in seen:
+            continue
+        output.append(step)
+        seen.add(key)
+    return output
+
+
 def _java_path_traversal_dataflow(content: str) -> dict[str, object] | None:
     """Locate a simple Java source -> path concatenation -> file sink flow."""
     lines = content.splitlines()
@@ -379,11 +469,13 @@ def _java_path_traversal_dataflow(content: str) -> dict[str, object] | None:
     )
     file_sink = re.compile(r"\b(?:FileInputStream|FileReader|RandomAccessFile)\s*\(|\bnew\s+File\s*\(")
 
-    for line in lines:
+    assignments: list[tuple[int, str, str, str]] = []
+    for line_number, line in enumerate(lines, start=1):
         match = assignment.search(line)
         if not match:
             continue
         variable, expression = match.group(1), match.group(2)
+        assignments.append((line_number, variable, expression, line.strip()))
         if external_source.search(expression) or any(re.search(rf"\b{re.escape(name)}\b", expression) for name in tainted):
             tainted.add(variable)
 
@@ -399,6 +491,32 @@ def _java_path_traversal_dataflow(content: str) -> dict[str, object] | None:
         return None
     for line_number, line in enumerate(lines, start=1):
         if file_sink.search(line) and any(re.search(rf"\b{re.escape(name)}\b", line) for name in path_values):
+            candidates = []
+            for candidate_line, variable, expression, snippet in assignments:
+                if candidate_line > line_number:
+                    continue
+                if external_source.search(expression):
+                    kind, stage = "source", "外部输入进入路径变量"
+                elif variable in path_values:
+                    kind, stage = "propagation", "路径拼接或传播"
+                elif variable in tainted:
+                    kind, stage = "propagation", "不可信数据传播"
+                else:
+                    continue
+                candidates.append({
+                    "kind": kind,
+                    "stage": stage,
+                    "line": candidate_line,
+                    "snippet": snippet[:180],
+                })
+            sources = [item for item in candidates if item["kind"] == "source"]
+            propagation = [item for item in candidates if item["kind"] == "propagation"]
+            trace_steps = sources[:1] + propagation[-3:] + [{
+                "kind": "sink",
+                "stage": "文件读取接口",
+                "line": line_number,
+                "snippet": line.strip()[:180],
+            }]
             return {
                 "source": "rule_engine",
                 "rule_id": "PATH-002",
@@ -410,6 +528,7 @@ def _java_path_traversal_dataflow(content: str) -> dict[str, object] | None:
                 "cwe": "CWE-22",
                 "line": line_number,
                 "snippet": line.strip()[:180],
+                "trace_steps": _deduplicate_trace_steps(trace_steps),
             }
     return None
 

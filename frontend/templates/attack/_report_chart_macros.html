@@ -1,0 +1,73 @@
+{% macro file_model_radar(radar) -%}
+<div class="report-radar-layout report-radar-layout-comparison">
+    <svg class="report-radar-chart" viewBox="0 0 360 285" role="img" aria-labelledby="file-report-radar-title">
+        <title id="file-report-radar-title">本次实际执行模型的五项独立评测指标对比</title>
+        {% for grid in radar.grid_polygons %}
+        <polygon points="{{ grid.points }}" class="report-radar-grid{% if grid.level == 1.0 %} is-major{% endif %}"></polygon>
+        <text x="185" y="{{ radar.center_y - 84 * grid.level + 3 }}" class="report-radar-tick">{{ grid.level }}</text>
+        {% endfor %}
+        {% for axis in radar.axes %}
+        <line x1="{{ radar.center_x }}" y1="{{ radar.center_y }}" x2="{{ axis.x }}" y2="{{ axis.y }}" class="report-radar-axis"></line>
+        {% endfor %}
+        {% for series in radar.series %}
+        <g aria-label="{{ series.model_name }}：{{ series.aria_metrics }}">
+            <polygon points="{{ series.points }}" class="report-radar-shape report-radar-series-{{ series.style_key }}"></polygon>
+            {% for dot in series.dots %}<circle cx="{{ dot.x }}" cy="{{ dot.y }}" r="3" class="report-radar-dot report-radar-series-{{ series.style_key }}"></circle>{% endfor %}
+        </g>
+        {% endfor %}
+        {% for axis in radar.axes %}
+        <text x="{{ axis.label_x }}" y="{{ axis.label_y }}" text-anchor="{{ axis.anchor }}" class="report-radar-label"><tspan x="{{ axis.label_x }}">{{ axis.label }} ({{ axis.abbreviation }})</tspan></text>
+        {% endfor %}
+    </svg>
+    <div class="report-radar-model-legend" aria-label="执行模型与版本">
+        {% for series in radar.series %}
+        <article>
+            <i class="report-radar-series-{{ series.style_key }}" aria-hidden="true"></i>
+            <div><strong>{{ series.model_name }}</strong><code>{{ series.version }}</code></div>
+        </article>
+        {% endfor %}
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro categorical_columns(chart) -%}
+<div class="report-column-chart report-category-columns">
+    <div class="report-column-axis" aria-hidden="true"><span>MAX</span><span></span><span></span><span></span><span>0</span></div>
+    <div class="report-column-plot" style="--chart-columns: {{ chart.entries|length }}" role="img" aria-label="项目语言文件数量对比">
+        {% for item in chart.entries %}
+        <div class="report-column-category">
+            <div class="report-column-bars report-single-column">
+                <span class="report-column-bar report-column-bar-category" style="--bar-height: {{ item.height }}%" aria-label="{{ item.label|zh }} {{ item.value }} 个文件，占 {{ item.percent }}%"><b>{{ item.value }}</b></span>
+            </div>
+            <span class="report-column-label" title="{{ item.label|zh }}">{{ item.label|zh }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro model_radar(radar) -%}
+<div class="report-radar-layout">
+    <svg class="report-radar-chart" viewBox="0 0 360 285" role="img" aria-labelledby="report-radar-title">
+        <title id="report-radar-title">{{ radar.model_name }} 五项独立评测指标雷达图</title>
+        {% for grid in radar.grid_polygons %}
+        <polygon points="{{ grid.points }}" class="report-radar-grid{% if grid.level == 1.0 %} is-major{% endif %}"></polygon>
+        <text x="185" y="{{ radar.center_y - 84 * grid.level + 3 }}" class="report-radar-tick">{{ grid.level }}</text>
+        {% endfor %}
+        {% for axis in radar.axes %}
+        <line x1="{{ radar.center_x }}" y1="{{ radar.center_y }}" x2="{{ axis.x }}" y2="{{ axis.y }}" class="report-radar-axis"></line>
+        {% endfor %}
+        <polygon points="{{ radar.points }}" class="report-radar-shape"></polygon>
+        {% for axis in radar.axes %}<circle cx="{{ axis.x if axis.percent == 100 else radar.center_x + (axis.x - radar.center_x) * axis.percent / 100 }}" cy="{{ axis.y if axis.percent == 100 else radar.center_y + (axis.y - radar.center_y) * axis.percent / 100 }}" r="3" class="report-radar-dot"></circle>{% endfor %}
+        {% for axis in radar.axes %}
+        <text x="{{ axis.label_x }}" y="{{ axis.label_y }}" text-anchor="{{ axis.anchor }}" class="report-radar-label"><tspan x="{{ axis.label_x }}">{{ axis.label }} ({{ axis.abbreviation }})</tspan><tspan x="{{ axis.label_x }}" dy="13" class="report-radar-value">{{ axis.percent }}%</tspan></text>
+        {% endfor %}
+    </svg>
+    <dl class="report-radar-meta">
+        <div><dt>执行模型</dt><dd>{{ radar.model_name }}</dd></div>
+        <div><dt>评测范围</dt><dd>{{ radar.scope }}</dd></div>
+        <div><dt>评测样本</dt><dd>{{ radar.samples if radar.samples is not none else '未记录' }}</dd></div>
+        <div><dt>执行版本</dt><dd title="{{ radar.version }}">{{ radar.version_short }}</dd></div>
+    </dl>
+</div>
+{%- endmacro %}

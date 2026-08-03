@@ -10,7 +10,7 @@
 
 <section class="runtime-grid runtime-grid-wide model-runtime-grid" aria-label="模型运行状态">
     {% for model in runtime_models %}
-    <article class="runtime-item motion-card">
+    <article class="runtime-item motion-card model-depth-card">
         <span class="status-dot status-{{ model.status }}"></span>
         <strong>{{ model.name }}</strong>
         <span class="status-label status-{{ model.status }}">{{ '可运行' if model.status == 'completed' else '不可用' }}</span>
@@ -18,45 +18,7 @@
     {% endfor %}
 </section>
 
-<section class="table-panel motion-card section-block" id="performance">
-    <div class="section-title compact-title"><h2>当前模型性能</h2></div>
-    <div class="table-scroll">
-        <table class="data-table model-performance-table">
-            <thead><tr><th>模型</th><th>准确率</th><th>精确率</th><th>误报率</th><th>漏报率</th><th>F1 分数</th><th>发布情况</th></tr></thead>
-            <tbody>
-            {% for row in performance_rows %}
-            <tr class="model-performance-metrics">
-                <td><strong>{{ row.model }}</strong></td>
-                <td>{{ metric(row.accuracy) }}</td>
-                <td>{{ metric(row.precision) }}</td>
-                <td>{{ metric(row.false_positive_rate) }}</td>
-                <td>{{ metric(row.false_negative_rate) }}</td>
-                <td><strong>{{ metric(row.f1) }}</strong></td>
-                <td><span class="status-label status-{{ 'completed' if row.published else 'unavailable' }}">{{ '已发布' if row.published else '未发布' }}</span></td>
-            </tr>
-            <tr class="model-tradeoff-row">
-                <td colspan="7">
-                    <div class="model-tradeoff-grid">
-                        <div class="model-tradeoff-item model-advantage">
-                            <strong>优点</strong>
-                            <span>{{ row.advantage }}</span>
-                        </div>
-                        <div class="model-tradeoff-item model-limitation">
-                            <strong>缺点</strong>
-                            <span>{{ row.limitation }}</span>
-                        </div>
-                    </div>
-                </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="7"><div class="empty-state">暂无可读取的模型指标。</div></td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<section class="table-panel motion-card section-block" id="versions">
+<section class="table-panel motion-card section-block model-depth-card" id="versions">
     <div class="section-title compact-title"><h2>模型版本</h2></div>
     <div class="model-version-list">
         {% for group in version_groups %}
@@ -66,14 +28,14 @@
                     <h3>{{ group.name }}</h3>
                     <code>{{ group.active_version_label or group.active_version }}</code>
                 </div>
-                <label class="version-select-field">
+                <div class="version-select-field">
                     <span>版本</span>
-                    <select data-model-version-select data-six-row-select aria-label="选择 {{ group.name }} 版本">
+                    <select data-model-version-select data-animated-list-select aria-label="选择 {{ group.name }} 版本">
                         {% for version in group.versions %}
                         <option value="{{ version.version }}" {% if version.version == group.active_version %}selected{% endif %}>{{ version.display_label or version.version }}{% if version.version == group.active_version %}（当前）{% endif %}</option>
                         {% endfor %}
                     </select>
-                </label>
+                </div>
             </div>
 
             {% for version in group.versions %}
@@ -83,9 +45,9 @@
                     <span class="status-label status-{{ 'completed' if version.published else 'queued' }}">{{ '已发布' if version.published else '历史版本' }}</span>
                     <div class="version-status-actions">
                         {% if language_task and language_task.language_metrics %}
-                        <label class="version-language-field">
+                        <div class="version-language-field">
                             <span>查看语言</span>
-                            <select data-version-language-select data-six-row-select aria-label="查看 {{ group.name }} {{ version.version }} 的语言指标">
+                            <select data-version-language-select data-animated-list-select aria-label="查看 {{ group.name }} {{ version.version }} 的语言指标">
                                 <option
                                     value="summary"
                                     data-language-label="{{ language_task.language_metrics | selectattr('full_metrics') | map(attribute='language_label') | join('、') }}"
@@ -95,6 +57,11 @@
                                     data-false-positive-rate="{{ language_task.false_positive_rate if language_task.false_positive_rate is not none else '' }}"
                                     data-false-negative-rate="{{ language_task.false_negative_rate if language_task.false_negative_rate is not none else '' }}"
                                     data-f1="{{ language_task.f1 if language_task.f1 is not none else '' }}"
+                                    data-samples="{{ language_task.samples if language_task.samples is not none else '' }}"
+                                    data-tn="{{ language_task.confusion_matrix.tn if language_task.confusion_matrix else '' }}"
+                                    data-fp="{{ language_task.confusion_matrix.fp if language_task.confusion_matrix else '' }}"
+                                    data-fn="{{ language_task.confusion_matrix.fn if language_task.confusion_matrix else '' }}"
+                                    data-tp="{{ language_task.confusion_matrix.tp if language_task.confusion_matrix else '' }}"
                                     selected
                                 >版本总体</option>
                                 {% for language in language_task.language_metrics %}
@@ -108,11 +75,16 @@
                                     data-false-positive-rate="{{ language.false_positive_rate if language.false_positive_rate is not none else '' }}"
                                     data-false-negative-rate="{{ language.false_negative_rate if language.false_negative_rate is not none else '' }}"
                                     data-f1="{{ language.f1 if language.f1 is not none else '' }}"
+                                    data-samples="{{ language.samples if language.samples is not none else '' }}"
+                                    data-tn="{{ language.confusion_matrix.tn if language.confusion_matrix else '' }}"
+                                    data-fp="{{ language.confusion_matrix.fp if language.confusion_matrix else '' }}"
+                                    data-fn="{{ language.confusion_matrix.fn if language.confusion_matrix else '' }}"
+                                    data-tp="{{ language.confusion_matrix.tp if language.confusion_matrix else '' }}"
                                 >{{ language.language_label }}</option>
                                 {% endif %}
                                 {% endfor %}
                             </select>
-                        </label>
+                        </div>
                         {% endif %}
                         {% if current_user.role == 'admin' and group.activation_supported and not version.published %}
                         <form method="post" action="{{ url_for('attack.activate_xgb_model' if group.key == 'xgboost' else 'attack.activate_model', version=version.version) }}" onsubmit="return confirm('{% if version.quality_gate_passed is sameas false %}该版本未通过质量门禁，{% endif %}确认发布版本 {{ version.version }}？')">
@@ -140,6 +112,49 @@
                         </tbody>
                     </table>
                 </div>
+                <div
+                    class="model-evaluation-panel"
+                    data-model-radar
+                    data-default-scope="{{ group.name }} · {{ version.display_label or version.version }}"
+                    data-accuracy="{{ language_task.accuracy if language_task and language_task.accuracy is not none else '' }}"
+                    data-precision="{{ language_task.precision if language_task and language_task.precision is not none else '' }}"
+                    data-false-positive-rate="{{ language_task.false_positive_rate if language_task and language_task.false_positive_rate is not none else '' }}"
+                    data-false-negative-rate="{{ language_task.false_negative_rate if language_task and language_task.false_negative_rate is not none else '' }}"
+                    data-f1="{{ language_task.f1 if language_task and language_task.f1 is not none else '' }}"
+                    data-samples="{{ language_task.samples if language_task and language_task.samples is not none else '' }}"
+                    data-tn="{{ language_task.confusion_matrix.tn if language_task and language_task.confusion_matrix else '' }}"
+                    data-fp="{{ language_task.confusion_matrix.fp if language_task and language_task.confusion_matrix else '' }}"
+                    data-fn="{{ language_task.confusion_matrix.fn if language_task and language_task.confusion_matrix else '' }}"
+                    data-tp="{{ language_task.confusion_matrix.tp if language_task and language_task.confusion_matrix else '' }}"
+                >
+                    <div class="model-evaluation-grid">
+                        <figure class="model-science-figure model-radar-figure">
+                            <figcaption><span>（a）</span>五项性能指标</figcaption>
+                            <svg class="model-radar-chart" data-radar-svg viewBox="0 0 420 330" role="img" aria-label="{{ group.name }} 五项指标雷达图"></svg>
+                        </figure>
+                        <figure class="model-science-figure model-confusion-figure">
+                            <figcaption><span>（b）</span>二分类混淆矩阵</figcaption>
+                            <table class="model-confusion-matrix" aria-label="实际值与预测值混淆矩阵">
+                                <thead>
+                                    <tr><th scope="col">实际值 \ 预测值</th><th scope="col">正常</th><th scope="col">恶意</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <th scope="row">正常</th>
+                                        <td class="is-correct" data-confusion-cell="tn"><span>TN</span><strong data-confusion-count="tn">—</strong><small data-confusion-rate="tn">正确放行</small></td>
+                                        <td class="is-error" data-confusion-cell="fp"><span>FP</span><strong data-confusion-count="fp">—</strong><small data-confusion-rate="fp">误报</small></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">恶意</th>
+                                        <td class="is-error" data-confusion-cell="fn"><span>FN</span><strong data-confusion-count="fn">—</strong><small data-confusion-rate="fn">漏报</small></td>
+                                        <td class="is-correct" data-confusion-cell="tp"><span>TP</span><strong data-confusion-count="tp">—</strong><small data-confusion-rate="tp">正确拦截</small></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="model-confusion-empty" data-confusion-empty hidden>该版本暂无可验证的混淆矩阵</div>
+                        </figure>
+                    </div>
+                </div>
             </div>
             {% endfor %}
         </section>
@@ -147,7 +162,7 @@
     </div>
 </section>
 
-<section class="table-panel motion-card section-block" id="training-jobs">
+<section class="table-panel motion-card section-block model-depth-card" id="training-jobs">
     <div class="section-title compact-title">
         <div><h2>训练任务</h2></div>
         <a class="secondary-action compact-button" href="{{ url_for('attack.models', _anchor='training-jobs') }}">刷新记录</a>
@@ -195,7 +210,7 @@
     </div>
 </section>
 
-<section class="model-footnotes panel motion-card" aria-label="模型中心说明">
+<section class="model-footnotes panel motion-card model-depth-card" aria-label="模型中心说明">
     <h2>使用说明</h2>
     <ol>
         <li>选择模型和训练集，然后提交训练。</li>
@@ -208,26 +223,33 @@
 
 {% block extra_scripts %}
 <script>
-document.querySelectorAll("[data-model-version-detail]").forEach(function(detail) {
+const initializeVersionLanguageMetrics = function(detail) {
+    if (!detail || detail.dataset.languageMetricsReady === "true") return;
     const select = detail.querySelector("[data-version-language-select]");
     if (!select) return;
+    detail.dataset.languageMetricsReady = "true";
     const metricKeys = ["accuracy", "precision", "falsePositiveRate", "falseNegativeRate", "f1"];
+    const metricCells = Object.fromEntries(metricKeys.map(function(key) {
+        return [key, detail.querySelector('[data-version-metric="' + key + '"]')];
+    }));
+    const scope = detail.querySelector("[data-version-language-scope]");
     const showLanguageMetrics = function() {
         const option = select.options[select.selectedIndex];
+        if (!option) return;
         metricKeys.forEach(function(key) {
-            const cell = detail.querySelector('[data-version-metric="' + key + '"]');
+            const cell = metricCells[key];
             if (!cell) return;
             const raw = option.dataset[key];
             const value = raw === "" || Number.isNaN(Number(raw))
                 ? "未记录"
                 : Number(raw).toFixed(4);
             if (key === "f1") {
-                cell.innerHTML = "<strong>" + value + "</strong>";
+                const strong = cell.querySelector("strong");
+                (strong || cell).textContent = value;
             } else {
                 cell.textContent = value;
             }
         });
-        const scope = detail.querySelector("[data-version-language-scope]");
         if (scope) {
             scope.textContent = option.dataset.metricNote
                 ? option.dataset.languageLabel + " · " + option.dataset.metricNote
@@ -236,52 +258,39 @@ document.querySelectorAll("[data-model-version-detail]").forEach(function(detail
     };
     select.addEventListener("change", showLanguageMetrics);
     showLanguageMetrics();
+};
+document.querySelectorAll("[data-model-version-detail]:not(.is-hidden)").forEach(function(detail) {
+    initializeVersionLanguageMetrics(detail);
+});
+document.addEventListener("model-version-visible", function(event) {
+    initializeVersionLanguageMetrics(event.detail && event.detail.detail);
 });
 document.querySelectorAll("[data-model-version-group]").forEach(function(group) {
     const select = group.querySelector("[data-model-version-select]");
     if (!select) return;
+    const details = Array.from(group.querySelectorAll("[data-model-version-detail]"));
+    const detailsByVersion = new Map(details.map(function(detail) {
+        return [detail.dataset.modelVersionDetail, detail];
+    }));
+    let visibleDetail = details.find(function(detail) {
+        return !detail.classList.contains("is-hidden");
+    }) || null;
     const showVersion = function() {
-        group.querySelectorAll("[data-model-version-detail]").forEach(function(detail) {
-            detail.classList.toggle("is-hidden", detail.dataset.modelVersionDetail !== select.value);
-        });
+        const nextDetail = detailsByVersion.get(select.value);
+        if (!nextDetail || nextDetail === visibleDetail) return;
+        if (visibleDetail) visibleDetail.classList.add("is-hidden");
+        nextDetail.classList.remove("is-hidden");
+        visibleDetail = nextDetail;
+        document.dispatchEvent(new CustomEvent("model-version-visible", {
+            detail: { detail: nextDetail }
+        }));
     };
     select.addEventListener("change", showVersion);
-    showVersion();
-});
-document.querySelectorAll("[data-six-row-select]").forEach(function(select) {
-    const collapse = function() {
-        select.size = 1;
-        select.classList.remove("is-six-row-list");
-    };
-    const expand = function() {
-        if (select.options.length <= 1) return;
-        select.size = Math.min(6, select.options.length);
-        select.classList.add("is-six-row-list");
-    };
-    select.addEventListener("mousedown", function(event) {
-        if (select.size <= 1) {
-            event.preventDefault();
-            select.focus();
-            expand();
-        }
-    });
-    select.addEventListener("change", function() {
-        collapse();
-        select.blur();
-    });
-    select.addEventListener("blur", collapse);
-    select.addEventListener("keydown", function(event) {
-        if ((event.key === "Enter" || event.key === " ") && select.size <= 1) {
-            event.preventDefault();
-            expand();
-        } else if (event.key === "Escape") {
-            collapse();
-            select.blur();
-        }
-    });
 });
 {% if training_active %}
 window.setTimeout(function() { window.location.reload(); }, 5000);
 {% endif %}
 </script>
+<script src="{{ url_for('static', filename='js/animated-language-select.js') }}?v=20260801-lazy-model-selects"></script>
+<script src="{{ url_for('static', filename='js/model-radar.js') }}?v=20260801-lazy-radar"></script>
 {% endblock %}

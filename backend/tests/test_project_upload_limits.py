@@ -116,6 +116,25 @@ def test_safe_extract_only_writes_bounded_source_files(local_tmp_path):
     assert any("可疑路径" in warning for warning in warnings)
 
 
+def test_safe_extract_skips_encrypted_members_and_continues(local_tmp_path):
+    archive_data = BytesIO()
+    with ZipFile(archive_data, "w") as archive:
+        archive.writestr("src/encrypted.py", "print('secret')")
+        archive.writestr("src/readable.py", "print('ok')")
+    archive_data.seek(0)
+    target = local_tmp_path / "encrypted-member"
+    target.mkdir()
+
+    with ZipFile(archive_data) as archive:
+        encrypted_member = archive.getinfo("src/encrypted.py")
+        encrypted_member.flag_bits |= 0x1
+        warnings = project_scanner._safe_extract(archive, target)
+
+    assert not (target / "src" / "encrypted.py").exists()
+    assert (target / "src" / "readable.py").read_text(encoding="utf-8") == "print('ok')"
+    assert warnings == ["已跳过需要密码的加密文件：src/encrypted.py"]
+
+
 def test_safe_extract_converts_invalid_windows_components_without_losing_paths(
     local_tmp_path,
 ):
@@ -168,6 +187,81 @@ def test_safe_extract_accepts_file_at_limit_and_skips_only_above_it(local_tmp_pa
     assert (target / "src" / "at-limit.py").read_bytes() == b"x" * 10
     assert not (target / "src" / "over-limit.py").exists()
     assert warnings == ["已跳过超出大小限制的文件：src/over-limit.py"]
+
+
+def test_deep_project_persists_resolved_file_relationships(
+    local_tmp_path,
+    monkeypatch,
+):
+    archive_data = BytesIO()
+    with ZipFile(archive_data, "w") as archive:
+        archive.writestr(
+            "src/main.c",
+            '#include "util.h"\nint main(void) { return util(); }',
+        )
+        archive.writestr("src/util.h", "int util(void) { return 0; }")
+    archive_data.seek(0)
+
+    monkeypatch.setattr(project_scanner, "SCAN_TEMP_ROOT", local_tmp_path)
+    monkeypatch.setattr(project_scanner, "_deep_languages", lambda: set())
+    monkeypatch.setattr(
+        project_scanner,
+        "scan_xgb_prepared",
+        lambda *_args, **_kwargs: [{
+            "name": "xgboost_malicious",
+            "status": "completed",
+            "decision": "benign",
+            "probability": 0.1,
+            "threshold": 0.8,
+            "model_version": "xgb-test",
+            "metadata": {"task": "malicious_intent"},
+        }],
+    )
+
+    def fake_scan_file(filename, _payload, **_kwargs):
+        return {
+            "filename": filename,
+            "language": "c",
+            "engines": [],
+            "risk_score": 12 if filename.endswith("main.c") else 0,
+            "risk_level": "low" if filename.endswith("main.c") else "safe",
+            "final_decision": "benign",
+            "categories": [],
+        }
+
+    monkeypatch.setattr(project_scanner, "scan_file", fake_scan_file)
+    monkeypatch.setattr(
+        project_scanner.GATEngine,
+        "scan_project",
+        lambda _self, graph, cancel_event=None: {
+            "name": "gatv2",
+            "status": "completed",
+            "decision": "benign",
+            "probability": 0.2,
+            "threshold": 0.65,
+            "model_version": "gat-test",
+            "metadata": {
+                "node_count": graph["node_count"],
+                "edge_count": graph["edge_count"],
+            },
+        },
+    )
+
+    result = project_scanner.scan_zip_project(
+        archive_data,
+        original_filename="relationship.zip",
+        mode="deep",
+        generate_line_attributions=False,
+    )
+
+    graph = result["project_relationship_graph"]
+    paths = {node["id"]: node["path"] for node in graph["nodes"]}
+    assert graph["edge_count"] == 1
+    assert [
+        (paths[edge["source"]], paths[edge["target"]], edge["relation"])
+        for edge in graph["edges"]
+    ] == [("src/main.c", "src/util.h", "include")]
+    assert result["project_engines"][-1]["status"] == "completed"
 
 
 def test_project_upload_template_reports_one_gib_limit():

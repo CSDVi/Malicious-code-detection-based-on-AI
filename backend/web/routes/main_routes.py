@@ -6,7 +6,7 @@ import json
 import time
 from threading import RLock
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from attack_detection.database import (
@@ -31,6 +31,7 @@ _frontend_state: dict[str, object] = {
 @main_bp.route("/")
 @login_required
 def dashboard():
+    show_opening = bool(session.pop("show_dashboard_opening", False))
     recent_records = _merge_recent_detection_records(
         list_record_summaries(current_user.username, 20),
         list_scan_jobs(
@@ -43,6 +44,7 @@ def dashboard():
     return render_template(
         "index.html",
         recent_records=recent_records,
+        show_opening=show_opening,
     )
 
 
@@ -103,6 +105,7 @@ def login():
         user = authenticate(request.form.get("username", ""), request.form.get("password", ""))
         if user:
             login_user(user)
+            session["show_dashboard_opening"] = True
             return redirect(url_for("main.dashboard"))
         flash("用户名或密码错误")
     return render_template("login.html")

@@ -8,6 +8,7 @@ from attack_detection.engines.xgb_engine import (
     XGBoostEngine,
     _line_attributions,
 )
+from attack_detection.engines.rule_engine import RuleEngine
 from attack_detection.features.graph_builder import build_lightweight_graph
 from attack_detection.project_scanner import aggregate_project_xgboost, summarize_project
 from attack_detection.model_center import TASK_LABELS, _task_rows, model_center_view
@@ -57,6 +58,11 @@ def _scan_with_rule_engine(
         generate_line_attributions=False,
         run_legacy_baseline=False,
     )
+
+
+def _rule_findings(filename: str, content: str) -> list[dict[str, object]]:
+    language = detect_language(filename, content)
+    return list(RuleEngine().scan(content, language).get("findings") or [])
 
 
 def test_email_ioc_fast_path_preserves_whole_text_regex_matches():
@@ -283,21 +289,32 @@ def test_codet5p_project_requests_are_grouped_without_changing_output_indices():
     ]
 
 
-def test_rule_based_sql_injection_is_active_while_vulnerability_model_stays_disabled():
+def test_sql_rule_explains_the_code_without_overriding_ai_benign():
+    content = "cursor.execute('select * from users where id=' + request.args.get('id'))"
     result = _scan_with_rule_engine(
         "vulnerable_sql.py",
-        "cursor.execute('select * from users where id=' + request.args.get('id'))",
+        content,
     )
-    assert "SQL Injection" in result["categories"]
-    assert result["final_decision"] == "vulnerable"
+    rule_engine = RuleEngine().scan(content, "python")
+    rule_findings = rule_engine["findings"]
+
+    assert any(item.get("category") == "SQL Injection" for item in rule_findings)
+    assert result["categories"] == []
+    assert result["matches"] == []
+    assert result["final_decision"] == "benign"
+    assert result["decision_authority"] == "ai"
     assert result["confidence"] is None
     assert "combined_probability" not in result["vulnerability_risk"]
     assert result["vulnerability_risk"]["available"] is False
     assert result["vulnerability_risk"]["status"] == "disabled"
     assert result["vulnerability_risk"]["probability"] is None
-    assert result["risk_score"] >= 35
-    assert any("参数" in advice for advice in result["repair_suggestions"])
-    assert any("OWASP SQL 注入" in item["title"] for item in result["remediation_references"])
+    assert result["risk_score"] == 0
+    assert not any(item["name"] == "rule_engine" for item in result["engines"])
+    assert rule_engine["decision"] == "not_applicable"
+    assert rule_engine["risk_score"] is None
+    assert rule_engine["metadata"]["role"] == "explanation_only"
+    assert rule_engine["metadata"]["affects_final_decision"] is False
+    assert rule_engine["metadata"]["affects_risk_score"] is False
 
 
 def test_sql_injection_dataflow_covers_common_host_languages():
@@ -337,11 +354,12 @@ def test_sql_injection_dataflow_covers_common_host_languages():
     for language, (filename, code) in samples.items():
         result = _scan_with_rule_engine(filename, code)
         sql_findings = [
-            match for match in result["matches"]
+            match for match in _rule_findings(filename, code)
             if match.get("category") == "SQL Injection"
         ]
         assert sql_findings, language
-        assert result["final_decision"] == "vulnerable"
+        assert result["final_decision"] in {"benign", "unknown"}
+        assert result["matches"] == []
         assert result["vulnerability_risk"]["status"] == "disabled"
 
 
@@ -418,8 +436,14 @@ def test_new_owasp_baseline_rules_detect_high_signal_security_failures():
 
     for filename, (code, expected_category) in samples.items():
         result = _scan_with_rule_engine(filename, code)
-        assert expected_category in result["categories"], filename
-        assert result["owasp_categories"], filename
+        rule_findings = _rule_findings(filename, code)
+        assert any(
+            item.get("category") == expected_category
+            for item in rule_findings
+        ), filename
+        if result["final_decision"] != "malicious":
+            assert result["matches"] == [], filename
+            assert result["categories"] == [], filename
         assert result["owasp_top10_2025"] == {
             "coverage_level": "baseline",
             "covered_categories": 10,
@@ -532,7 +556,7 @@ def test_risk_taxonomy_adds_api_and_supply_chain_scope_without_overmapping():
     assert sql["api_security_category"] is None
 
 
-def test_quick_mode_runs_xgboost_and_low_cost_rules():
+def test_quick_mode_runs_ai_first_and_skips_explainers_for_benign_result():
     result = scan_code("sample.py", "import os\nprint(os.getenv('HOME'))", mode="quick")
     engines = {engine["name"]: engine for engine in result["engines"]}
     assert engines["xgboost_malicious"]["status"] in {"completed", "unavailable"}
@@ -540,7 +564,8 @@ def test_quick_mode_runs_xgboost_and_low_cost_rules():
         engines["xgboost_malicious"]["status"] == "completed"
     )
     assert "xgboost_vulnerability" not in engines
-    assert engines["rule_engine"]["status"] == "completed"
+    assert result["final_decision"] == "benign"
+    assert "rule_engine" not in engines
     assert "static_evidence" not in engines
     assert "pe_static" not in engines
 
@@ -565,6 +590,21 @@ def test_webshell_sample_is_malicious():
     assert "WebShell" in result["categories"]
     assert result["final_decision"] == "malicious"
     assert result["risk_score"] >= 65
+    rule_engine = next(item for item in result["engines"] if item["name"] == "rule_engine")
+    assert rule_engine["decision"] == "not_applicable"
+    assert rule_engine["risk_score"] is None
+    assert rule_engine["metadata"]["role"] == "explanation_only"
+    assert rule_engine["metadata"]["affects_final_decision"] is False
+    assert rule_engine["metadata"]["affects_risk_score"] is False
+    command_explanation = next(
+        item for item in result["matches"]
+        if item.get("category") == "Command Execution"
+    )
+    assert command_explanation["description"]
+    assert command_explanation["harm"]
+    assert command_explanation["repair_suggestions"]
+    assert command_explanation["cwe"] == "CWE-78"
+    assert command_explanation["cve_examples"][0]["id"] == "CVE-2014-6271"
 
 
 def test_command_script_extensions_are_supported_and_detected():
@@ -603,7 +643,10 @@ def test_single_file_evidence_has_chinese_explanation_context_and_suspicion():
         "webshell.php",
         "safe = 1\neval($_POST['cmd']);\nprint(safe)",
     )
-    assert result["evidence_items"][0]["evidence_basis"] == "ai_decision"
+    assert all(
+        item.get("evidence_basis") != "ai_decision"
+        for item in result["evidence_items"]
+    )
     evidence = next(
         item for item in result["evidence_items"]
         if item.get("line") == 2
@@ -620,6 +663,8 @@ def test_single_file_evidence_has_chinese_explanation_context_and_suspicion():
 def test_record_view_deduplicates_repair_suggestions_without_dropping_evidence():
     advice = "核对域名/IP/URL 的业务用途、所有权和历史信誉，避免仅凭字符串直接定性。"
     record = _public_record_view({
+        "final_decision": "malicious",
+        "decision_authority": "ai",
         "rule_matches": [
             {"risk_type": "context", "line": 1, "repair_advice": advice},
             {"risk_type": "context", "line": 2, "repair_advice": f"  {advice}  "},
@@ -632,8 +677,11 @@ def test_record_view_deduplicates_repair_suggestions_without_dropping_evidence()
     assert record["repair_suggestions"] == [advice]
 
 
-def test_record_view_keeps_sourced_rule_vulnerability_and_its_catalog_metadata():
+def test_ai_malicious_record_keeps_rule_explanation_and_catalog_metadata():
     record = _public_record_view({
+        "final_decision": "malicious",
+        "decision_authority": "ai",
+        "language": "python",
         "rule_matches": [{
             "source": "rule_engine",
             "risk_type": "vulnerable",
@@ -651,6 +699,25 @@ def test_record_view_keeps_sourced_rule_vulnerability_and_its_catalog_metadata()
     assert len(record["rule_matches"]) == 1
     assert record["repair_suggestions"] == ["使用参数化查询。", "限制数据库账户权限。"]
     assert record["remediation_references"][0]["title"] == "OWASP SQL 注入防护指南"
+    assert record["rule_matches"][0]["cwe"] == "CWE-89"
+    assert record["rule_matches"][0]["cve_examples"][0]["id"] == "CVE-2023-34362"
+
+
+def test_record_hides_rule_hits_without_an_ai_malicious_decision():
+    record = _public_record_view({
+        "final_decision": "unknown",
+        "decision_authority": "unresolved",
+        "rule_matches": [{
+            "source": "rule_engine",
+            "risk_type": "malicious",
+            "category": "WebShell",
+        }],
+        "engines": [],
+        "engine_votes": {},
+    })
+
+    assert record["rule_matches"] == []
+    assert record["evidence_items"] == []
 
 
 def test_safe_sample_has_low_risk():
@@ -682,7 +749,7 @@ def test_hashes_are_reproducible_and_validated_model_owns_decision():
     assert fused["rule_fallback_used"] is False
 
 
-def test_unvalidated_xgboost_fallback_is_advisory_only():
+def test_unvalidated_xgboost_route_remains_unresolved_without_rule_fallback():
     fused = fuse_engine_results([{
         "name": "xgboost_malicious",
         "status": "completed",
@@ -699,8 +766,10 @@ def test_unvalidated_xgboost_fallback_is_advisory_only():
     assert fused["final_decision"] == "unknown"
     assert fused["risk_score"] > 0
     assert fused["decision_basis"] == "unresolved"
-    assert fused["rule_fallback_used"] is True
-    assert fused["rule_fallback_reason"] == "ai_routes_not_validated"
+    assert fused["decision_authority"] == "unresolved"
+    assert fused["rule_fallback_used"] is False
+    assert fused["rule_fallback_reason"] is None
+    assert fused["ai_unresolved_reason"] == "ai_routes_not_validated"
 
 
 def test_malicious_rule_cannot_override_decisive_ai_benign_result():
@@ -732,7 +801,7 @@ def test_malicious_rule_cannot_override_decisive_ai_benign_result():
     assert fused["rule_disagrees_with_ai"] is True
 
 
-def test_uncertain_ai_uses_rules_as_explicit_fallback():
+def test_uncertain_ai_cannot_be_overridden_by_rules():
     fused = fuse_engine_results([
         {
             "name": "xgboost_malicious",
@@ -759,12 +828,15 @@ def test_uncertain_ai_uses_rules_as_explicit_fallback():
         },
     ])
 
-    assert fused["final_decision"] == "malicious"
-    assert fused["decision_authority"] == "rule_fallback"
-    assert fused["rule_fallback_reason"] == "ai_uncertain"
+    assert fused["final_decision"] == "unknown"
+    assert fused["decision_authority"] == "unresolved"
+    assert fused["risk_score"] <= 34
+    assert fused["rule_fallback_used"] is False
+    assert fused["rule_fallback_reason"] is None
+    assert fused["ai_unresolved_reason"] == "ai_uncertain"
 
 
-def test_conflicting_ai_models_use_rules_only_as_tiebreaker():
+def test_conflicting_ai_models_remain_unresolved_without_rule_tiebreaker():
     fused = fuse_engine_results([
         {
             "name": "xgboost_malicious",
@@ -791,7 +863,64 @@ def test_conflicting_ai_models_use_rules_only_as_tiebreaker():
     assert fused["final_decision"] == "unknown"
     assert fused["decision_authority"] == "unresolved"
     assert fused["ai_conflict"] is True
-    assert fused["rule_fallback_reason"] == "ai_model_conflict"
+    assert fused["risk_score"] <= 64
+    assert fused["rule_fallback_used"] is False
+    assert fused["rule_fallback_reason"] is None
+    assert fused["ai_unresolved_reason"] == "ai_model_conflict"
+
+
+def test_rules_alone_cannot_decide_maliciousness_or_raise_risk_score():
+    fused = fuse_engine_results([{
+        "name": "rule_engine",
+        "status": "completed",
+        "decision": "malicious",
+        "risk_score": 99,
+        "findings": [{
+            "risk_type": "malicious",
+            "category": "WebShell",
+            "severity": 10,
+            "line": 1,
+            "snippet": "eval(input)",
+        }],
+    }])
+
+    assert fused["final_decision"] == "unknown"
+    assert fused["risk_score"] == 0
+    assert fused["decision_authority"] == "unresolved"
+    assert fused["ai_unresolved_reason"] == "ai_unavailable"
+    assert fused["rules_role"] == "explanation_only"
+    assert fused["findings"] == []
+
+
+def test_rule_explanations_cannot_change_an_ai_malicious_risk_score():
+    ai_engine = {
+        "name": "xgboost_malicious",
+        "status": "completed",
+        "decision": "malicious",
+        "probability": 0.72,
+        "threshold": 0.5,
+        "findings": [],
+    }
+    rule_engine = {
+        "name": "rule_engine",
+        "status": "completed",
+        "decision": "not_applicable",
+        "risk_score": 100,
+        "findings": [{
+            "risk_type": "malicious",
+            "category": "WebShell",
+            "severity": 10,
+            "line": 1,
+            "snippet": "eval(input)",
+        }],
+    }
+
+    ai_only = fuse_engine_results([ai_engine])
+    with_explanation = fuse_engine_results([ai_engine, rule_engine])
+
+    assert with_explanation["final_decision"] == "malicious"
+    assert with_explanation["risk_score"] == ai_only["risk_score"] == 72
+    assert with_explanation["findings"][0]["category"] == "WebShell"
 
 
 def test_java_path_traversal_rule_is_active_without_enabling_vulnerability_model():
@@ -803,8 +932,12 @@ def test_java_path_traversal_rule_is_active_without_enabling_vulnerability_model
     }
 }"""
     result = _scan_with_rule_engine("Demo.java", code)
-    assert result["final_decision"] == "vulnerable"
-    assert any(match["rule_id"] == "PATH-002" for match in result["matches"])
+    assert result["final_decision"] == "benign"
+    assert result["matches"] == []
+    assert any(
+        match["rule_id"] == "PATH-002"
+        for match in _rule_findings("Demo.java", code)
+    )
     assert result["vulnerability_risk"]["status"] == "disabled"
 
 
@@ -827,13 +960,18 @@ def test_runtime_status_contains_registered_model_families():
 
 
 def test_txt_file_is_supported_and_scanned():
+    content = "cursor.execute('select * from users where id=' + request.args.get('id'))"
     result = _scan_with_rule_engine(
         "notes.txt",
-        "cursor.execute('select * from users where id=' + request.args.get('id'))",
+        content,
     )
     assert result["language"] == "unknown"
-    assert "SQL Injection" in result["categories"]
-    assert result["final_decision"] == "vulnerable"
+    assert any(
+        item.get("category") == "SQL Injection"
+        for item in _rule_findings("notes.txt", content)
+    )
+    assert result["categories"] == []
+    assert result["final_decision"] == "unknown"
 
 
 def test_plain_txt_displays_txt_when_content_language_is_unknown():
@@ -850,7 +988,11 @@ def test_txt_python_api_without_import_or_def_is_routed_as_python():
     result = scan_code("payload.txt", content, mode="quick")
     assert result["language"] == "python"
     assert result["display_language"] == "python"
-    assert "Command Execution" in result["categories"]
+    assert any(
+        item.get("category") == "Command Execution"
+        for item in _rule_findings("payload.txt", content)
+    )
+    assert result["categories"] == []
 
 
 def test_quick_rules_detect_python_popen_shell_true_in_txt():
@@ -859,8 +1001,12 @@ def test_quick_rules_detect_python_popen_shell_true_in_txt():
     result = scan_code("payload.txt", content, mode="quick")
 
     assert result["language"] == "python"
-    assert "Command Execution" in result["categories"]
-    assert result["final_decision"] == "vulnerable"
+    assert any(
+        item.get("category") == "Command Execution"
+        for item in _rule_findings("payload.txt", content)
+    )
+    assert result["categories"] == []
+    assert result["final_decision"] == "benign"
 
 
 def test_txt_php_content_is_routed_as_php():
@@ -878,6 +1024,7 @@ def test_project_summary_ranks_high_risk_files():
     assert summary["file_count"] == 2
     assert summary["high_risk_files"][0]["filename"] == "a.php"
     assert summary["risk_level"] in {"medium", "high", "critical"}
+    assert sum(summary["category_counts"].values()) >= 1
 
 
 def test_project_summary_returns_every_ranked_file_for_frontend_pagination():
@@ -901,7 +1048,7 @@ def test_project_summary_returns_every_ranked_file_for_frontend_pagination():
     )
 
 
-def test_project_summary_audits_ai_participation_and_rule_fallback():
+def test_project_summary_does_not_emit_redundant_ai_coverage_aggregates():
     results = [
         {
             "filename": "ai.py",
@@ -916,12 +1063,12 @@ def test_project_summary_audits_ai_participation_and_rule_fallback():
             "engines": [],
         },
         {
-            "filename": "fallback.ts",
+            "filename": "unresolved.ts",
             "language": "typescript",
-            "risk_score": 70,
-            "risk_level": "high",
-            "final_decision": "malicious",
-            "decision_authority": "rule_fallback",
+            "risk_score": 30,
+            "risk_level": "low",
+            "final_decision": "unknown",
+            "decision_authority": "unresolved",
             "ai_participated": True,
             "ai_model_names": ["xgboost_malicious"],
             "categories": [],
@@ -942,12 +1089,13 @@ def test_project_summary_audits_ai_participation_and_rule_fallback():
 
     summary = summarize_project("audit.zip", results)
 
-    assert summary["ai_eligible_file_count"] == 2
-    assert summary["ai_ineligible_file_count"] == 1
-    assert summary["ai_participation_rate"] == 100.0
-    assert summary["ai_primary_decision_rate"] == 50.0
-    assert summary["rule_fallback_file_count"] == 1
-    assert summary["ai_participation_target_met"] is True
+    assert summary["ai_models_executed"] == ["xgboost_malicious"]
+    assert "ai_eligible_file_count" not in summary
+    assert "ai_participation_rate" not in summary
+    assert "ai_primary_decision_rate" not in summary
+    assert "ai_unresolved_file_count" not in summary
+    assert "rule_fallback_file_count" not in summary
+    assert "ai_participation_target_met" not in summary
 
 
 def test_project_summary_includes_completed_gatv2_decision():
@@ -1021,7 +1169,7 @@ def test_project_xgboost_uses_validated_max_file_aggregation():
     assert summary["max_score"] == 91
 
 
-def test_project_summary_preserves_rule_based_vulnerability_decision():
+def test_project_summary_treats_legacy_rule_vulnerability_as_unresolved():
     summary = summarize_project("demo.zip", [{
         "filename": "app.py",
         "language": "python",
@@ -1032,7 +1180,7 @@ def test_project_summary_preserves_rule_based_vulnerability_decision():
         "categories": ["SQL Injection"],
     }])
 
-    assert summary["final_decision"] == "vulnerable"
+    assert summary["final_decision"] == "unknown"
     assert summary["decision_counts"]["vulnerable"] == 1
     assert summary["category_counts"]["SQL Injection"] == 1
 
@@ -1416,6 +1564,8 @@ def test_detection_center_single_file_form_has_upload_only():
     compare_template = (BACKEND_DIR.parent / "frontend" / "templates" / "attack" / "compare.html").read_text(encoding="utf-8")
     route = (BACKEND_DIR / "web" / "routes" / "attack_routes.py").read_text(encoding="utf-8")
     assert 'name="code_file"' in template
+    assert "data-file-scan-form" in template
+    assert 'target_type="file"' in route
     assert 'name="code_text"' not in template
     assert 'request.form.get("code_text")' not in route
     assert '<span class="eyebrow">检测结果</span>' not in template
@@ -1424,17 +1574,29 @@ def test_detection_center_single_file_form_has_upload_only():
     assert "综合风险分" not in template
     assert "risk-score-orb" in template
     assert "risk-score-orb" in record_template
-    assert "record.repair_suggestions" in record_template
-    assert "AI与规则一致" in template
-    assert "AI重点关注" in template
-    assert "<strong>危害</strong>" in template
-    assert "<strong>检测依据</strong>" in template
-    assert "贡献度只解释模型判断，不是漏洞概率" in template
+    evidence_group_template = (BACKEND_DIR.parent / "frontend" / "templates" / "attack" / "_evidence_groups.html").read_text(encoding="utf-8")
+    weakness_template = (BACKEND_DIR.parent / "frontend" / "templates" / "attack" / "_weakness_examples.html").read_text(encoding="utf-8")
+    report_templates = template + record_template + evidence_group_template + weakness_template
+    assert "record.repair_suggestions" not in record_template
+    assert "AI与规则一致" not in report_templates
+    assert "AI重点关注" not in report_templates
+    assert "<strong>危害</strong>" in evidence_group_template
+    assert "<strong>检测依据</strong>" not in report_templates
+    assert "规则解释" not in report_templates
+    assert "可疑度" in evidence_group_template
+    assert "CWE / CVE 典型例子" not in weakness_template
+    assert "同类公开案例仅用于帮助理解该弱点" not in weakness_template
     assert "record.evidence_items" in record_template
     assert "用于跨平台核对同一份文件；指纹本身不是恶意证据。" not in template
     assert "用于跨平台核对同一份文件；指纹本身不是恶意证据。" not in record_template
     assert "<span>{{ engine.status|zh }}</span>" in template
-    assert "<td>{{ engine.status|zh }}</td>" in template
+    project_insights_template = (
+        BACKEND_DIR.parent / "frontend" / "templates" / "attack"
+        / "_project_report_insights.html"
+    ).read_text(encoding="utf-8")
+    assert "GATv2 · {{ graph_status.label }}" in project_insights_template
+    assert "项目文件调用关系" in project_insights_template
+    assert "本次没有完成项目图模型分析" not in template
     assert "<span>{{ engine.status|zh }}</span>" in record_template
     assert "<span>{{ engine.status|zh }}</span>" in compare_template
     assert "本次已执行" in template
@@ -1486,7 +1648,7 @@ def test_auxiliary_analysis_view_separates_completed_and_inactive_source_capabil
     ]
     inactive = {item["name"]: item["detail"] for item in view["inactive"]}
     assert inactive["PE/DLL 只读解析"] == "当前不是 EXE/DLL/SYS/OCX 文件"
-    assert inactive["SHA256 外部信誉"] == "未配置/未查询"
+    assert "SHA256 外部信誉" not in inactive
     assert inactive["隔离动态沙箱"] == "已配置服务，但未开启自动提交"
 
 
@@ -1509,8 +1671,30 @@ def test_auxiliary_analysis_view_reports_binary_components_truthfully():
     inactive = {item["name"]: item["detail"] for item in view["inactive"]}
     assert inactive["静态去混淆"] == "当前二进制文件不适用"
     assert inactive["行为链"] == "当前二进制文件不适用"
-    assert inactive["SHA256 外部信誉"] == "未配置/未查询"
+    assert "SHA256 外部信誉" not in inactive
     assert inactive["隔离动态沙箱"] == "未配置/未提交"
+
+
+def test_auxiliary_analysis_only_shows_hash_reputation_when_configured():
+    view = _auxiliary_analysis_view({
+        "language": "python",
+        "engines": [{
+            "name": "hash_reputation",
+            "status": "completed",
+            "metadata": {
+                "provider": "VirusTotal",
+                "malicious": 2,
+                "suspicious": 1,
+            },
+        }],
+    })
+
+    reputation = next(
+        item for item in view["executed"]
+        if item["name"] == "SHA256 外部信誉"
+    )
+    assert "VirusTotal已返回：恶意 2，可疑 1" in reputation["detail"]
+    assert "不参与AI结论或风险分" in reputation["detail"]
 
 
 def test_detection_center_copy_matches_runtime_models_and_upload_limits():
@@ -1573,7 +1757,7 @@ def test_detection_center_copy_matches_runtime_models_and_upload_limits():
     assert "text-align: center;" in style
     assert "vertical-align: middle;" in style
     assert '.page-jump input[type="number"]::-webkit-inner-spin-button' in style
-    assert ".evidence-explanation-grid > .evidence-remediation" in style
+    assert ".evidence-group-guidance-grid > .evidence-remediation" in style
 
     project_detail = (
         template_root / "project_file_detail.html"
@@ -1595,6 +1779,26 @@ def test_project_job_tray_does_not_restore_finished_history_and_keeps_close_by_s
     assert 'data-cancel-job="${jobId}"' in script
     assert 'data-dismiss-job="${jobId}"' in script
     assert "xiezhi-dismissed-scan-jobs" not in script
+
+
+def test_model_center_lazily_initializes_hidden_version_visuals():
+    frontend_root = BACKEND_DIR.parent / "frontend"
+    template = (frontend_root / "templates" / "attack" / "models.html").read_text(
+        encoding="utf-8"
+    )
+    select_script = (
+        frontend_root / "static" / "js" / "animated-language-select.js"
+    ).read_text(encoding="utf-8")
+    radar_script = (
+        frontend_root / "static" / "js" / "model-radar.js"
+    ).read_text(encoding="utf-8")
+
+    assert "model-version-visible" in template
+    assert "detailsByVersion" in template
+    assert 'detail.classList.contains("is-hidden")' in select_script
+    assert "getBoundingClientRect" not in select_script
+    assert 'updateEvaluation(panel, false)' in radar_script
+    assert 'updateEvaluation(panel, true)' not in radar_script
 
 
 def test_frontend_and_web_training_expose_no_vulnerability_task():

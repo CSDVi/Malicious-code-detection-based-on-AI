@@ -1,9 +1,9 @@
 {
   "schema_version": 5,
-  "model_version": "xgb-malicious-routed-20260727T234637Z-6a248b9fe4",
-  "created_at": "2026-07-27T23:46:37+00:00",
-  "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\processed\\xgb_multilingual_malicious_20260728_v66.jsonl",
-  "dataset_sha256": "6a248b9fe41934dfc12479e60bf69d54ce817d5bde0557ae7565a76dc8f22e4a",
+  "model_version": "xgb-malicious-routed-20260801T162758Z-e406bdd434",
+  "created_at": "2026-08-01T16:27:59+00:00",
+  "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\processed\\xgb_multilingual_malicious_20260801_v68_4090_project_supplement.jsonl",
+  "dataset_sha256": "e406bdd434dc5f95443631bff5fe1502216fb785d7f2e523e3fe3a6cb3002a3a",
   "feature_schema": [
     "byte_length",
     "character_length",
@@ -107,8 +107,8 @@
     "language_unknown"
   ],
   "feature_mode": "universal_language_routes_with_validated_malicious_hybrid_routes",
-  "samples_total": 36208,
-  "samples_training_eligible": 36208,
+  "samples_total": 37767,
+  "samples_training_eligible": 37767,
   "excluded_review_samples": 0,
   "label_counts": {
     "benign": 39641,
@@ -331,23 +331,23 @@
         }
       },
       "deployment": {
-        "samples": 5860,
-        "accuracy": 0.9797,
-        "precision": 0.9597,
-        "recall": 0.9629,
-        "f1": 0.9613,
-        "pr_auc": 0.9934,
-        "false_positive_rate": 0.0143,
-        "false_negative_rate": 0.0371,
+        "samples": 6081,
+        "accuracy": 0.9799,
+        "precision": 0.9637,
+        "recall": 0.967,
+        "f1": 0.9653,
+        "pr_auc": 0.9938,
+        "false_positive_rate": 0.0148,
+        "false_negative_rate": 0.033,
         "quality_gate_passed": true,
         "confusion_matrix": [
           [
-            4263,
-            62
+            4261,
+            64
           ],
           [
-            57,
-            1478
+            58,
+            1698
           ]
         ]
       },
@@ -1295,32 +1295,32 @@
         },
         "c": {
           "artifact": "xgb_malicious_c.joblib",
-          "feature_mode": "structured_static",
+          "feature_mode": "hybrid_hash",
           "thresholds": {
-            "decision": 0.1,
-            "uncertain_low": 0.05,
-            "uncertain_high": 0.15,
+            "decision": 0.5106294476985931,
+            "uncertain_low": 0.41062945,
+            "uncertain_high": 0.56062945,
             "validation_fpr": 0.0018,
-            "validation_precision": 0.9756,
-            "validation_fnr": 0.0244,
-            "validation_recall": 0.9756,
-            "validation_f1": 0.9756,
-            "target_fpr": 0.08,
+            "validation_precision": 0.9778,
+            "validation_fnr": 0.0222,
+            "validation_recall": 0.9778,
+            "validation_f1": 0.9778,
+            "target_fpr": 0.1,
             "target_precision": 0.9,
-            "target_fnr": 0.08,
-            "plateau_position": 0.0,
+            "target_fnr": 0.1,
+            "plateau_position": 0.5,
             "quality_gate_passed": true
           },
           "evaluation_scope": "file",
           "deployment": {
-            "samples": 641,
-            "accuracy": 0.9922,
-            "precision": 0.9091,
-            "recall": 0.9756,
-            "f1": 0.9412,
-            "pr_auc": 0.9972,
+            "samples": 644,
+            "accuracy": 0.9938,
+            "precision": 0.9167,
+            "recall": 1.0,
+            "f1": 0.9565,
+            "pr_auc": 0.996,
             "false_positive_rate": 0.0067,
-            "false_negative_rate": 0.0244,
+            "false_negative_rate": 0.0,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
@@ -1328,20 +1328,20 @@
                 4
               ],
               [
-                1,
-                40
+                0,
+                44
               ]
             ]
           },
           "validation": {
-            "samples": 604,
+            "samples": 608,
             "accuracy": 0.9967,
-            "precision": 0.9756,
-            "recall": 0.9756,
-            "f1": 0.9756,
-            "pr_auc": 0.9825,
+            "precision": 0.9778,
+            "recall": 0.9778,
+            "f1": 0.9778,
+            "pr_auc": 0.9972,
             "false_positive_rate": 0.0018,
-            "false_negative_rate": 0.0244,
+            "false_negative_rate": 0.0222,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
@@ -1350,19 +1350,19 @@
               ],
               [
                 1,
-                40
+                44
               ]
             ]
           },
           "test": {
-            "samples": 641,
-            "accuracy": 0.9922,
-            "precision": 0.9091,
-            "recall": 0.9756,
-            "f1": 0.9412,
-            "pr_auc": 0.9972,
+            "samples": 644,
+            "accuracy": 0.9938,
+            "precision": 0.9167,
+            "recall": 1.0,
+            "f1": 0.9565,
+            "pr_auc": 0.996,
             "false_positive_rate": 0.0067,
-            "false_negative_rate": 0.0244,
+            "false_negative_rate": 0.0,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
@@ -1370,8 +1370,8 @@
                 4
               ],
               [
-                1,
-                40
+                0,
+                44
               ]
             ]
           },
@@ -1379,38 +1379,38 @@
           "source_heldout_verified": null,
           "evaluation_protocol": "family_split",
           "release_scope": "strict_family_held_out_file_evaluation",
-          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v50_all_language_routes\\c.jsonl",
+          "dataset": "/root/autodl-tmp/xgb_4090_supplement_20260801/routes/c.jsonl",
           "split_counts": {
-            "train": 2800,
-            "validation": 604,
-            "test": 641
+            "train": 2822,
+            "validation": 608,
+            "test": 644
           },
           "split_label_counts": {
             "train": {
               "benign": 2500,
-              "malicious": 300
+              "malicious": 322
             },
             "validation": {
               "benign": 563,
-              "malicious": 41
+              "malicious": 45
             },
             "test": {
               "benign": 600,
-              "malicious": 41
+              "malicious": 44
             }
           },
           "sampling_protocol": {
             "max_per_language_split_class": null,
             "balanced_split_classes": false,
             "balanced_eval_classes": false,
-            "positive_weight_mode": "balanced",
-            "positive_weight_multiplier": 1.5,
-            "threshold_target_fpr": 0.08,
+            "positive_weight_mode": "default",
+            "positive_weight_multiplier": 1.0,
+            "threshold_target_fpr": 0.1,
             "threshold_target_precision": 0.9,
-            "threshold_target_fnr": 0.08,
-            "threshold_plateau_position": 0.0,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.5,
             "excluded_structured_features": [],
-            "calibration_mode": "sigmoid",
+            "calibration_mode": "none",
             "deterministic": true,
             "family_assignment_precedes_sampling": true
           }
@@ -1539,32 +1539,32 @@
         },
         "cpp": {
           "artifact": "xgb_malicious_cpp.joblib",
-          "feature_mode": "structured_static",
+          "feature_mode": "hybrid_hash",
           "thresholds": {
-            "decision": 0.695,
-            "uncertain_low": 0.595,
-            "uncertain_high": 0.745,
-            "validation_fpr": 0.0033,
-            "validation_precision": 0.9794,
+            "decision": 0.5098952198028565,
+            "uncertain_low": 0.40989522,
+            "uncertain_high": 0.55989522,
+            "validation_fpr": 0.0017,
+            "validation_precision": 0.9897,
             "validation_fnr": 0.0,
             "validation_recall": 1.0,
-            "validation_f1": 0.9896,
-            "target_fpr": 0.08,
+            "validation_f1": 0.9948,
+            "target_fpr": 0.1,
             "target_precision": 0.9,
-            "target_fnr": 0.08,
-            "plateau_position": 0.0,
+            "target_fnr": 0.1,
+            "plateau_position": 0.5,
             "quality_gate_passed": true
           },
           "evaluation_scope": "file",
           "deployment": {
-            "samples": 518,
-            "accuracy": 0.9903,
-            "precision": 0.9796,
-            "recall": 0.9697,
-            "f1": 0.9746,
-            "pr_auc": 0.9989,
+            "samples": 519,
+            "accuracy": 0.9923,
+            "precision": 0.98,
+            "recall": 0.98,
+            "f1": 0.98,
+            "pr_auc": 0.9981,
             "false_positive_rate": 0.0048,
-            "false_negative_rate": 0.0303,
+            "false_negative_rate": 0.02,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
@@ -1572,41 +1572,41 @@
                 2
               ],
               [
-                3,
-                96
+                2,
+                98
               ]
             ]
           },
           "validation": {
-            "samples": 695,
-            "accuracy": 0.9971,
-            "precision": 0.9794,
+            "samples": 696,
+            "accuracy": 0.9986,
+            "precision": 0.9897,
             "recall": 1.0,
-            "f1": 0.9896,
-            "pr_auc": 0.9972,
-            "false_positive_rate": 0.0033,
+            "f1": 0.9948,
+            "pr_auc": 0.9998,
+            "false_positive_rate": 0.0017,
             "false_negative_rate": 0.0,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
-                598,
-                2
+                599,
+                1
               ],
               [
                 0,
-                95
+                96
               ]
             ]
           },
           "test": {
-            "samples": 518,
-            "accuracy": 0.9903,
-            "precision": 0.9796,
-            "recall": 0.9697,
-            "f1": 0.9746,
-            "pr_auc": 0.9989,
+            "samples": 519,
+            "accuracy": 0.9923,
+            "precision": 0.98,
+            "recall": 0.98,
+            "f1": 0.98,
+            "pr_auc": 0.9981,
             "false_positive_rate": 0.0048,
-            "false_negative_rate": 0.0303,
+            "false_negative_rate": 0.02,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
@@ -1614,8 +1614,8 @@
                 2
               ],
               [
-                3,
-                96
+                2,
+                98
               ]
             ]
           },
@@ -1623,38 +1623,38 @@
           "source_heldout_verified": null,
           "evaluation_protocol": "family_split",
           "release_scope": "strict_family_held_out_file_evaluation",
-          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v50_all_language_routes\\cpp.jsonl",
+          "dataset": "/root/autodl-tmp/xgb_4090_supplement_20260801/routes/cpp.jsonl",
           "split_counts": {
-            "train": 2567,
-            "validation": 695,
-            "test": 518
+            "train": 2575,
+            "validation": 696,
+            "test": 519
           },
           "split_label_counts": {
             "train": {
               "benign": 2011,
-              "malicious": 556
+              "malicious": 564
             },
             "validation": {
               "benign": 600,
-              "malicious": 95
+              "malicious": 96
             },
             "test": {
               "benign": 419,
-              "malicious": 99
+              "malicious": 100
             }
           },
           "sampling_protocol": {
             "max_per_language_split_class": null,
             "balanced_split_classes": false,
             "balanced_eval_classes": false,
-            "positive_weight_mode": "balanced",
-            "positive_weight_multiplier": 1.5,
-            "threshold_target_fpr": 0.08,
+            "positive_weight_mode": "default",
+            "positive_weight_multiplier": 1.0,
+            "threshold_target_fpr": 0.1,
             "threshold_target_precision": 0.9,
-            "threshold_target_fnr": 0.08,
-            "threshold_plateau_position": 0.0,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.5,
             "excluded_structured_features": [],
-            "calibration_mode": "sigmoid",
+            "calibration_mode": "none",
             "deterministic": true,
             "family_assignment_precedes_sampling": true
           }
@@ -1827,30 +1827,30 @@
           "artifact": "xgb_malicious_html.joblib",
           "feature_mode": "hybrid_hash",
           "thresholds": {
-            "decision": 0.285,
-            "uncertain_low": 0.185,
-            "uncertain_high": 0.335,
-            "validation_fpr": 0.059,
-            "validation_precision": 0.9179,
-            "validation_fnr": 0.0575,
-            "validation_recall": 0.9425,
-            "validation_f1": 0.9301,
+            "decision": 0.39584694266319276,
+            "uncertain_low": 0.29584694,
+            "uncertain_high": 0.44584694,
+            "validation_fpr": 0.0509,
+            "validation_precision": 0.9365,
+            "validation_fnr": 0.0667,
+            "validation_recall": 0.9333,
+            "validation_f1": 0.9349,
             "target_fpr": 0.1,
             "target_precision": 0.9,
-            "target_fnr": 0.05,
-            "plateau_position": 0.0,
-            "quality_gate_passed": false
+            "target_fnr": 0.1,
+            "plateau_position": 0.5,
+            "quality_gate_passed": true
           },
           "evaluation_scope": "file",
           "deployment": {
-            "samples": 654,
-            "accuracy": 0.9297,
-            "precision": 0.9286,
-            "recall": 0.9015,
-            "f1": 0.9148,
-            "pr_auc": 0.9704,
+            "samples": 684,
+            "accuracy": 0.9284,
+            "precision": 0.9352,
+            "recall": 0.9013,
+            "f1": 0.9179,
+            "pr_auc": 0.9715,
             "false_positive_rate": 0.05,
-            "false_negative_rate": 0.0985,
+            "false_negative_rate": 0.0987,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
@@ -1858,41 +1858,41 @@
                 19
               ],
               [
-                27,
-                247
+                30,
+                274
               ]
             ]
           },
           "validation": {
-            "samples": 634,
-            "accuracy": 0.9416,
-            "precision": 0.9179,
-            "recall": 0.9425,
-            "f1": 0.9301,
-            "pr_auc": 0.9746,
-            "false_positive_rate": 0.059,
-            "false_negative_rate": 0.0575,
+            "samples": 673,
+            "accuracy": 0.9421,
+            "precision": 0.9365,
+            "recall": 0.9333,
+            "f1": 0.9349,
+            "pr_auc": 0.9787,
+            "false_positive_rate": 0.0509,
+            "false_negative_rate": 0.0667,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
-                351,
-                22
+                354,
+                19
               ],
               [
-                15,
-                246
+                20,
+                280
               ]
             ]
           },
           "test": {
-            "samples": 654,
-            "accuracy": 0.9297,
-            "precision": 0.9286,
-            "recall": 0.9015,
-            "f1": 0.9148,
-            "pr_auc": 0.9704,
+            "samples": 684,
+            "accuracy": 0.9284,
+            "precision": 0.9352,
+            "recall": 0.9013,
+            "f1": 0.9179,
+            "pr_auc": 0.9715,
             "false_positive_rate": 0.05,
-            "false_negative_rate": 0.0985,
+            "false_negative_rate": 0.0987,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
@@ -1900,8 +1900,8 @@
                 19
               ],
               [
-                27,
-                247
+                30,
+                274
               ]
             ]
           },
@@ -1909,38 +1909,38 @@
           "source_heldout_verified": null,
           "evaluation_protocol": "family_split",
           "release_scope": "strict_family_held_out_file_evaluation",
-          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v58_all_language_routes\\html.jsonl",
+          "dataset": "/root/autodl-tmp/xgb_4090_supplement_20260801/routes/html.jsonl",
           "split_counts": {
-            "train": 2924,
-            "validation": 634,
-            "test": 654
+            "train": 3188,
+            "validation": 673,
+            "test": 684
           },
           "split_label_counts": {
             "train": {
-              "benign": 1628,
-              "malicious": 1296
+              "benign": 1719,
+              "malicious": 1469
             },
             "validation": {
               "benign": 373,
-              "malicious": 261
+              "malicious": 300
             },
             "test": {
               "benign": 380,
-              "malicious": 274
+              "malicious": 304
             }
           },
           "sampling_protocol": {
             "max_per_language_split_class": null,
             "balanced_split_classes": false,
             "balanced_eval_classes": false,
-            "positive_weight_mode": "balanced",
-            "positive_weight_multiplier": 1.5,
+            "positive_weight_mode": "default",
+            "positive_weight_multiplier": 1.0,
             "threshold_target_fpr": 0.1,
             "threshold_target_precision": 0.9,
-            "threshold_target_fnr": 0.05,
-            "threshold_plateau_position": 0.0,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.5,
             "excluded_structured_features": [],
-            "calibration_mode": "sigmoid",
+            "calibration_mode": "none",
             "deterministic": true,
             "family_assignment_precedes_sampling": true
           }
@@ -2064,30 +2064,30 @@
         },
         "ruby": {
           "artifact": "xgb_malicious_ruby.joblib",
-          "feature_mode": "structured_static",
+          "feature_mode": "hybrid_hash",
           "thresholds": {
-            "decision": 0.04,
+            "decision": 0.11482929438352585,
             "uncertain_low": 0.05,
-            "uncertain_high": 0.09,
+            "uncertain_high": 0.16482929,
             "validation_fpr": 0.0,
             "validation_precision": 1.0,
-            "validation_fnr": 0.0909,
-            "validation_recall": 0.9091,
-            "validation_f1": 0.9524,
-            "target_fpr": 0.08,
+            "validation_fnr": 0.0105,
+            "validation_recall": 0.9895,
+            "validation_f1": 0.9947,
+            "target_fpr": 0.1,
             "target_precision": 0.9,
-            "target_fnr": 0.08,
-            "plateau_position": 0.0,
-            "quality_gate_passed": false
+            "target_fnr": 0.1,
+            "plateau_position": 0.5,
+            "quality_gate_passed": true
           },
           "evaluation_scope": "file",
           "deployment": {
-            "samples": 311,
-            "accuracy": 0.9968,
-            "precision": 0.9167,
+            "samples": 491,
+            "accuracy": 0.998,
+            "precision": 0.9948,
             "recall": 1.0,
-            "f1": 0.9565,
-            "pr_auc": 0.9924,
+            "f1": 0.9974,
+            "pr_auc": 1.0,
             "false_positive_rate": 0.0033,
             "false_negative_rate": 0.0,
             "quality_gate_passed": true,
@@ -2098,19 +2098,19 @@
               ],
               [
                 0,
-                11
+                191
               ]
             ]
           },
           "validation": {
-            "samples": 97,
-            "accuracy": 0.9897,
+            "samples": 277,
+            "accuracy": 0.9928,
             "precision": 1.0,
-            "recall": 0.9091,
-            "f1": 0.9524,
-            "pr_auc": 0.9805,
+            "recall": 0.9895,
+            "f1": 0.9947,
+            "pr_auc": 0.999,
             "false_positive_rate": 0.0,
-            "false_negative_rate": 0.0909,
+            "false_negative_rate": 0.0105,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
@@ -2118,18 +2118,18 @@
                 0
               ],
               [
-                1,
-                10
+                2,
+                189
               ]
             ]
           },
           "test": {
-            "samples": 311,
-            "accuracy": 0.9968,
-            "precision": 0.9167,
+            "samples": 491,
+            "accuracy": 0.998,
+            "precision": 0.9948,
             "recall": 1.0,
-            "f1": 0.9565,
-            "pr_auc": 0.9924,
+            "f1": 0.9974,
+            "pr_auc": 1.0,
             "false_positive_rate": 0.0033,
             "false_negative_rate": 0.0,
             "quality_gate_passed": true,
@@ -2140,7 +2140,7 @@
               ],
               [
                 0,
-                11
+                191
               ]
             ]
           },
@@ -2148,63 +2148,84 @@
           "source_heldout_verified": null,
           "evaluation_protocol": "family_split",
           "release_scope": "strict_family_held_out_file_evaluation",
-          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v47_all_language_routes\\ruby.jsonl",
+          "dataset": "/root/autodl-tmp/xgb_4090_supplement_20260801/routes/ruby.jsonl",
           "split_counts": {
-            "train": 813,
-            "validation": 97,
-            "test": 311
+            "train": 1513,
+            "validation": 277,
+            "test": 491
           },
           "split_label_counts": {
             "train": {
               "benign": 787,
-              "malicious": 26
+              "malicious": 726
             },
             "validation": {
               "benign": 86,
-              "malicious": 11
+              "malicious": 191
             },
             "test": {
               "benign": 300,
-              "malicious": 11
+              "malicious": 191
             }
           },
           "sampling_protocol": {
             "max_per_language_split_class": null,
             "balanced_split_classes": false,
             "balanced_eval_classes": false,
-            "positive_weight_mode": "balanced",
-            "positive_weight_multiplier": 1.5,
-            "threshold_target_fpr": 0.08,
+            "positive_weight_mode": "default",
+            "positive_weight_multiplier": 1.0,
+            "threshold_target_fpr": 0.1,
             "threshold_target_precision": 0.9,
-            "threshold_target_fnr": 0.08,
-            "threshold_plateau_position": 0.0,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.5,
             "excluded_structured_features": [],
-            "calibration_mode": "sigmoid",
+            "calibration_mode": "none",
             "deterministic": true,
             "family_assignment_precedes_sampling": true
           }
         },
         "rust": {
           "artifact": "xgb_malicious_rust.joblib",
-          "feature_mode": "structured_static",
+          "feature_mode": "hybrid_hash",
           "thresholds": {
-            "decision": 0.01,
+            "decision": 0.012575425785034896,
             "uncertain_low": 0.05,
-            "uncertain_high": 0.06,
+            "uncertain_high": 0.06257543,
             "validation_fpr": 0.0,
             "validation_precision": 1.0,
-            "validation_fnr": 0.0909,
-            "validation_recall": 0.9091,
-            "validation_f1": 0.9524,
-            "target_fpr": 0.08,
+            "validation_fnr": 0.0,
+            "validation_recall": 1.0,
+            "validation_f1": 1.0,
+            "target_fpr": 0.1,
             "target_precision": 0.9,
-            "target_fnr": 0.08,
-            "plateau_position": 0.0,
-            "quality_gate_passed": false
+            "target_fnr": 0.1,
+            "plateau_position": 0.5,
+            "quality_gate_passed": true
           },
           "evaluation_scope": "file",
           "deployment": {
-            "samples": 367,
+            "samples": 374,
+            "accuracy": 0.9947,
+            "precision": 0.9259,
+            "recall": 1.0,
+            "f1": 0.9615,
+            "pr_auc": 1.0,
+            "false_positive_rate": 0.0057,
+            "false_negative_rate": 0.0,
+            "quality_gate_passed": true,
+            "confusion_matrix": [
+              [
+                347,
+                2
+              ],
+              [
+                0,
+                25
+              ]
+            ]
+          },
+          "validation": {
+            "samples": 364,
             "accuracy": 1.0,
             "precision": 1.0,
             "recall": 1.0,
@@ -2212,27 +2233,6 @@
             "pr_auc": 1.0,
             "false_positive_rate": 0.0,
             "false_negative_rate": 0.0,
-            "quality_gate_passed": true,
-            "confusion_matrix": [
-              [
-                349,
-                0
-              ],
-              [
-                0,
-                18
-              ]
-            ]
-          },
-          "validation": {
-            "samples": 361,
-            "accuracy": 0.9972,
-            "precision": 1.0,
-            "recall": 0.9091,
-            "f1": 0.9524,
-            "pr_auc": 0.9545,
-            "false_positive_rate": 0.0,
-            "false_negative_rate": 0.0909,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
@@ -2240,29 +2240,29 @@
                 0
               ],
               [
-                1,
-                10
+                0,
+                14
               ]
             ]
           },
           "test": {
-            "samples": 367,
-            "accuracy": 1.0,
-            "precision": 1.0,
+            "samples": 374,
+            "accuracy": 0.9947,
+            "precision": 0.9259,
             "recall": 1.0,
-            "f1": 1.0,
+            "f1": 0.9615,
             "pr_auc": 1.0,
-            "false_positive_rate": 0.0,
+            "false_positive_rate": 0.0057,
             "false_negative_rate": 0.0,
             "quality_gate_passed": true,
             "confusion_matrix": [
               [
-                349,
-                0
+                347,
+                2
               ],
               [
                 0,
-                18
+                25
               ]
             ]
           },
@@ -2270,38 +2270,38 @@
           "source_heldout_verified": null,
           "evaluation_protocol": "family_split",
           "release_scope": "strict_family_held_out_file_evaluation",
-          "dataset": "D:\\Z_TEMP_photo\\AI\\code\\backend\\data\\splits\\xgb_v58_all_language_routes\\rust.jsonl",
+          "dataset": "/root/autodl-tmp/xgb_4090_supplement_20260801/routes/rust.jsonl",
           "split_counts": {
-            "train": 1055,
-            "validation": 361,
-            "test": 367
+            "train": 1090,
+            "validation": 364,
+            "test": 374
           },
           "split_label_counts": {
             "train": {
               "benign": 1040,
-              "malicious": 15
+              "malicious": 50
             },
             "validation": {
               "benign": 350,
-              "malicious": 11
+              "malicious": 14
             },
             "test": {
               "benign": 349,
-              "malicious": 18
+              "malicious": 25
             }
           },
           "sampling_protocol": {
             "max_per_language_split_class": null,
             "balanced_split_classes": false,
             "balanced_eval_classes": false,
-            "positive_weight_mode": "balanced",
-            "positive_weight_multiplier": 1.5,
-            "threshold_target_fpr": 0.08,
+            "positive_weight_mode": "default",
+            "positive_weight_multiplier": 1.0,
+            "threshold_target_fpr": 0.1,
             "threshold_target_precision": 0.9,
-            "threshold_target_fnr": 0.08,
-            "threshold_plateau_position": 0.0,
+            "threshold_target_fnr": 0.1,
+            "threshold_plateau_position": 0.5,
             "excluded_structured_features": [],
-            "calibration_mode": "sigmoid",
+            "calibration_mode": "none",
             "deterministic": true,
             "family_assignment_precedes_sampling": true
           }
@@ -2692,14 +2692,14 @@
           ]
         },
         "c": {
-          "samples": 641,
-          "accuracy": 0.9922,
-          "precision": 0.9091,
-          "recall": 0.9756,
-          "f1": 0.9412,
-          "pr_auc": 0.9972,
+          "samples": 644,
+          "accuracy": 0.9938,
+          "precision": 0.9167,
+          "recall": 1.0,
+          "f1": 0.9565,
+          "pr_auc": 0.996,
           "false_positive_rate": 0.0067,
-          "false_negative_rate": 0.0244,
+          "false_negative_rate": 0.0,
           "quality_gate_passed": true,
           "confusion_matrix": [
             [
@@ -2707,8 +2707,8 @@
               4
             ],
             [
-              1,
-              40
+              0,
+              44
             ]
           ]
         },
@@ -2734,14 +2734,14 @@
           ]
         },
         "cpp": {
-          "samples": 518,
-          "accuracy": 0.9903,
-          "precision": 0.9796,
-          "recall": 0.9697,
-          "f1": 0.9746,
-          "pr_auc": 0.9989,
+          "samples": 519,
+          "accuracy": 0.9923,
+          "precision": 0.98,
+          "recall": 0.98,
+          "f1": 0.98,
+          "pr_auc": 0.9981,
           "false_positive_rate": 0.0048,
-          "false_negative_rate": 0.0303,
+          "false_negative_rate": 0.02,
           "quality_gate_passed": true,
           "confusion_matrix": [
             [
@@ -2749,8 +2749,8 @@
               2
             ],
             [
-              3,
-              96
+              2,
+              98
             ]
           ]
         },
@@ -2783,14 +2783,14 @@
           ]
         },
         "html": {
-          "samples": 654,
-          "accuracy": 0.9297,
-          "precision": 0.9286,
-          "recall": 0.9015,
-          "f1": 0.9148,
-          "pr_auc": 0.9704,
+          "samples": 684,
+          "accuracy": 0.9284,
+          "precision": 0.9352,
+          "recall": 0.9013,
+          "f1": 0.9179,
+          "pr_auc": 0.9715,
           "false_positive_rate": 0.05,
-          "false_negative_rate": 0.0985,
+          "false_negative_rate": 0.0987,
           "quality_gate_passed": true,
           "confusion_matrix": [
             [
@@ -2798,8 +2798,8 @@
               19
             ],
             [
-              27,
-              247
+              30,
+              274
             ]
           ]
         },
@@ -2825,12 +2825,12 @@
           "quality_gate_passed": false
         },
         "ruby": {
-          "samples": 311,
-          "accuracy": 0.9968,
-          "precision": 0.9167,
+          "samples": 491,
+          "accuracy": 0.998,
+          "precision": 0.9948,
           "recall": 1.0,
-          "f1": 0.9565,
-          "pr_auc": 0.9924,
+          "f1": 0.9974,
+          "pr_auc": 1.0,
           "false_positive_rate": 0.0033,
           "false_negative_rate": 0.0,
           "quality_gate_passed": true,
@@ -2841,28 +2841,28 @@
             ],
             [
               0,
-              11
+              191
             ]
           ]
         },
         "rust": {
-          "samples": 367,
-          "accuracy": 1.0,
-          "precision": 1.0,
+          "samples": 374,
+          "accuracy": 0.9947,
+          "precision": 0.9259,
           "recall": 1.0,
-          "f1": 1.0,
+          "f1": 0.9615,
           "pr_auc": 1.0,
-          "false_positive_rate": 0.0,
+          "false_positive_rate": 0.0057,
           "false_negative_rate": 0.0,
           "quality_gate_passed": true,
           "confusion_matrix": [
             [
-              349,
-              0
+              347,
+              2
             ],
             [
               0,
-              18
+              25
             ]
           ]
         },
@@ -4785,17 +4785,9 @@
       ]
     },
     "new_routes": [
-      "bash",
       "c",
-      "config",
       "cpp",
-      "go",
       "html",
-      "java",
-      "javascript",
-      "php",
-      "powershell",
-      "python",
       "ruby",
       "rust"
     ]

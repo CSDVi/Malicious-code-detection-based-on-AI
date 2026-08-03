@@ -14,6 +14,12 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from attack_detection.dataset import CodeSample, is_task_training_eligible, load_dataset
+from attack_detection.training.codet5p_policy import (
+    LANGUAGE_THRESHOLD_CENTER,
+    LANGUAGE_THRESHOLD_MIN,
+    MAX_DECISION_THRESHOLD,
+    decision_threshold_candidates,
+)
 
 
 TASKS = {
@@ -52,6 +58,7 @@ def train_codet5p(
     patience: int = 2,
     batch_size: int = 4,
     learning_rate: float = 2e-5,
+    positive_class_weight: float | None = None,
     max_length: int = 512,
     stride: int = 128,
     maximum_code_characters: int = 32768,
@@ -131,8 +138,15 @@ def train_codet5p(
     train_labels = [1 if sample.label == positive else 0 for sample in partitions["train"]]
     positives = sum(train_labels)
     negatives = len(train_labels) - positives
+    if positive_class_weight is not None and positive_class_weight <= 0:
+        raise ValueError("positive_class_weight must be greater than zero")
+    resolved_positive_class_weight = (
+        float(positive_class_weight)
+        if positive_class_weight is not None
+        else max(1.0, negatives / max(1, positives))
+    )
     pos_weight = torch.tensor(
-        [max(1.0, negatives / max(1, positives))],
+        [resolved_positive_class_weight],
         dtype=torch.float32,
         device=device,
     )
@@ -333,6 +347,13 @@ def train_codet5p(
             for split, rows in partitions.items()
         },
         "threshold": threshold,
+        "threshold_policy": {
+            "minimum_language_threshold": LANGUAGE_THRESHOLD_MIN,
+            "preferred_center": LANGUAGE_THRESHOLD_CENTER,
+            "maximum_decision_threshold": MAX_DECISION_THRESHOLD,
+            "selection_split": "validation",
+            "selection_objective": "quality_gate_then_f1",
+        },
         "temperature": temperature,
         "validation_metrics": validation_metrics,
         "test_metrics": test_metrics,
@@ -359,6 +380,7 @@ def train_codet5p(
             "epochs_completed": len(history),
             "batch_size": batch_size,
             "learning_rate": learning_rate,
+            "positive_class_weight": resolved_positive_class_weight,
             "pairwise_weight": pairwise_weight,
             "pairwise_margin": pairwise_margin,
             "seed": seed,
@@ -603,7 +625,7 @@ def _fit_temperature(logits: list[float], labels: list[int]) -> float:
 
 
 def _select_threshold(labels: list[int], probabilities: list[float]) -> float:
-    candidates = sorted({0.01, 0.99, *[round(index / 100, 2) for index in range(2, 99)]})
+    candidates = decision_threshold_candidates()
     scored = []
     for threshold in candidates:
         metrics = _metrics(labels, probabilities, threshold)
@@ -612,8 +634,13 @@ def _select_threshold(labels: list[int], probabilities: list[float]) -> float:
             + max(0.0, metrics["false_positive_rate"] - QUALITY_GATE["maximum_false_positive_rate"])
             + max(0.0, metrics["false_negative_rate"] - QUALITY_GATE["maximum_false_negative_rate"])
         )
-        scored.append((violations, -metrics["f1"], threshold))
-    return float(min(scored)[2])
+        scored.append((
+            violations,
+            -metrics["f1"],
+            abs(threshold - LANGUAGE_THRESHOLD_CENTER),
+            threshold,
+        ))
+    return float(min(scored)[3])
 
 
 def _metrics(labels: list[int], probabilities: list[float], threshold: float) -> dict[str, Any]:
@@ -715,6 +742,7 @@ def main() -> None:
     parser.add_argument("--patience", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--learning-rate", type=float, default=2e-5)
+    parser.add_argument("--positive-class-weight", type=float)
     parser.add_argument("--max-length", type=int, default=512)
     parser.add_argument("--stride", type=int, default=128)
     parser.add_argument("--maximum-code-characters", type=int, default=32768)
@@ -737,6 +765,7 @@ def main() -> None:
         patience=args.patience,
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
+        positive_class_weight=args.positive_class_weight,
         max_length=args.max_length,
         stride=args.stride,
         maximum_code_characters=args.maximum_code_characters,

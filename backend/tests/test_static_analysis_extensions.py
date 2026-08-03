@@ -12,9 +12,13 @@ from attack_detection.features.behavior_tokens import (
 )
 from attack_detection.features.static_features import extract_static_features
 from attack_detection.reputation import HashReputationEngine
+from attack_detection.rules import detect_by_rules
 from attack_detection.sandbox import SandboxEngine
 from attack_detection.scanner import is_allowed_file, scan_file
+from attack_detection.source_masking import mask_non_executable_text
 from attack_detection.static_analysis import StaticAnalysisEngine
+from attack_detection.static_analysis.behavior_chains import detect_behavior_chains
+from attack_detection.static_analysis.source_deobfuscation import deobfuscate_source
 
 
 def _scan_with_rule_engine(
@@ -56,27 +60,43 @@ def test_ioc_is_context_only_and_does_not_become_malicious():
     )
     assert result["final_decision"] == "benign"
     assert result["categories"] == []
+    assert result["findings"] == []
+    assert not any(item["name"] == "static_evidence" for item in result["engines"])
+    static_engine = StaticAnalysisEngine().scan(
+        'url = "https://example.org/download"',
+        "python",
+    )
     assert any(
         item.get("category") == "IOC 线索"
-        for item in result["findings"]
+        for item in static_engine["findings"]
     )
-    assert result["engine_votes"]["static_evidence"]["metadata"]["context_hits"] >= 1
+    assert static_engine["decision"] == "not_applicable"
+    assert static_engine["metadata"]["role"] == "explanation_only"
+    assert static_engine["metadata"]["affects_final_decision"] is False
+    assert static_engine["metadata"]["context_hits"] >= 1
 
 
-def test_javascript_deobfuscation_explains_but_does_not_override_ai_benign():
+def test_javascript_deobfuscation_is_not_run_after_ai_benign():
     result = _scan_with_rule_engine(
         "payload.js",
         'eval(atob("ZXZhbCh4KQ=="))',
     )
     assert result["final_decision"] == "benign"
     assert result["decision_authority"] == "ai"
-    assert result["rule_disagrees_with_ai"] is True
+    assert result["rule_disagrees_with_ai"] is False
     assert result["categories"] == []
     assert result["matches"] == []
+    assert not any(item["name"] == "static_evidence" for item in result["engines"])
+    static_engine = StaticAnalysisEngine().scan(
+        'eval(atob("ZXZhbCh4KQ=="))',
+        "javascript",
+    )
     assert any(
         item.get("source") == "js_deobfuscation"
-        for item in result["findings"]
+        for item in static_engine["findings"]
     )
+    assert static_engine["decision"] == "not_applicable"
+    assert static_engine["risk_score"] is None
 
 
 @pytest.mark.parametrize(
@@ -101,10 +121,87 @@ def test_javascript_deobfuscation_explains_but_does_not_override_ai_benign():
 def test_cross_language_deobfuscation_decodes_literals_without_execution(language, content):
     result = StaticAnalysisEngine().scan(content, language)
     assert result["status"] == "completed"
-    assert result["decision"] == "malicious"
+    assert result["decision"] == "not_applicable"
+    assert result["risk_score"] is None
+    assert result["metadata"]["role"] == "explanation_only"
+    assert result["metadata"]["affects_final_decision"] is False
+    assert result["metadata"]["affects_risk_score"] is False
     assert result["metadata"]["decoded_count"] >= 1
     assert result["metadata"]["deobfuscation_language"] == language
     assert any(item.get("source") == "source_deobfuscation" for item in result["findings"])
+
+
+def test_utf16le_hex_escapes_are_explained_as_readable_text():
+    content = r'const value = "\x46\x00\x58\x00\x4E\x00\x42\x00\x46\x00\x58\x00";'
+
+    result = deobfuscate_source(content, "javascript")
+
+    assert result["decoded"] == [{
+        "encoding": "escaped-utf-16le",
+        "source": r'"\x46\x00\x58\x00\x4E\x00\x42\x00\x46\x00\x58\x00"',
+        "decoded": "FXNBFX",
+        "line": 1,
+    }]
+    assert "\x00" not in str(result["decoded"][0]["decoded"])
+
+
+def test_dangerous_escaped_text_reports_the_decoded_preview():
+    content = r'payload = "\x65\x76\x61\x6c\x28\x78\x29"'
+
+    result = deobfuscate_source(content, "python")
+
+    finding = next(item for item in result["findings"] if item["rule_id"] == "DEOB-EXEC")
+    assert finding["decoded_preview"] == "eval(x)"
+    assert "eval(x)" in finding["basis_text"]
+
+
+@pytest.mark.parametrize(
+    ("language", "comment"),
+    [
+        ("python", "# - command to start executing the newly downloaded program."),
+        ("java", "// - command to start executing the newly downloaded program."),
+        ("cpp", "/* - command to start executing the newly downloaded program. */"),
+    ],
+)
+def test_comment_prose_does_not_trigger_download_execute(language, comment):
+    assert detect_by_rules(comment, language) == []
+    assert detect_behavior_chains(comment, language) == []
+    static_result = StaticAnalysisEngine().scan(comment, language)
+    assert static_result["decision"] == "not_applicable"
+    assert static_result["findings"] == []
+
+
+def test_comment_masking_preserves_coordinates_and_active_code():
+    content = (
+        'const url = "http://example.org/a"; // documentation\n'
+        "/* command to start executing a downloaded program */\n"
+        "subprocess.run(download_url)\n"
+    )
+
+    masked = mask_non_executable_text(content, "javascript")
+    findings = detect_by_rules(content, "javascript")
+
+    assert len(masked) == len(content)
+    assert masked.count("\n") == content.count("\n")
+    assert '"http://example.org/a"' in masked
+    assert "documentation" not in masked
+    assert any(
+        item["rule_id"] == "DL-002"
+        and item["line"] == 3
+        and item["snippet"] == "subprocess.run(download_url)"
+        for item in findings
+    )
+
+
+def test_sleep_api_without_sql_context_is_not_sql_injection():
+    assert detect_by_rules("Sleep(20000);", "cpp") == []
+    assert any(
+        item["rule_id"] == "SQL-002"
+        for item in detect_by_rules(
+            'query = "SELECT * FROM users WHERE id = 1 OR SLEEP(5)"',
+            "python",
+        )
+    )
 
 
 def test_behavior_chain_combines_credential_read_and_network_send():
@@ -513,7 +610,8 @@ def test_zlib_wrapped_dataset_pe_is_analyzed_after_bounded_unwrap():
 
     assert pe_static["metadata"]["is_pe"] is True
     assert pe_static["metadata"]["container"] == "zlib"
-    assert result["risk_score"] > 0
+    assert result["risk_score"] == 0
+    assert result["risk_level"] == "unknown"
     assert result["final_decision"] == "unknown"
 
 
@@ -534,6 +632,8 @@ def test_positive_hash_reputation_requires_review_instead_of_benign():
     }])
     assert result["final_decision"] == "unknown"
     assert result["decision_basis"] == "external_context"
+    assert result["risk_score"] == 0
+    assert result["risk_level"] == "unknown"
 
 
 def test_binary_extensions_are_allowed_but_text_input_is_not_added_back():

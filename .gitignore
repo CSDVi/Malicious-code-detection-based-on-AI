@@ -64,3 +64,11 @@ desktop.ini
 /docs/项目清理审计_*/
 /scripts/audit_project_cleanup.py
 /XiezhiCodeGuard_*.zip
+
+# Public repository root allowlist. Keep only the runnable application tree.
+/*
+!/.gitignore
+!/README.md
+!/XiezhiCodeGuard.exe
+!/backend/
+!/frontend/

@@ -7,6 +7,11 @@ import attack_detection.engines.codet5p_engine as codet5p_engine_module
 from attack_detection.engines.codet5p_engine import CodeT5PEngine
 from attack_detection.model_center import model_center_view
 from attack_detection.training import deep_web_trainer
+from attack_detection.training.codet5p_classifier_trainer import _select_threshold
+from attack_detection.training.codet5p_policy import (
+    decision_threshold_candidates,
+    effective_decision_threshold,
+)
 from web.routes.attack_routes import _training_model_options, _validate_training_dataset
 
 
@@ -19,6 +24,20 @@ def test_training_options_include_only_visible_product_families_and_codet5p_base
         if item["family"] == "codet5p"
     ]
     assert "codet5p-220m-base" in {item["version"] for item in codet5p}
+
+
+def test_codet5p_threshold_policy_is_language_adaptive_around_point_eight():
+    labels = [0] * 10 + [1] * 10
+    probabilities = [
+        0.10, 0.20, 0.30, 0.40, 0.50,
+        0.60, 0.70, 0.75, 0.78, 0.79,
+    ] + [0.99] * 10
+
+    assert _select_threshold(labels, probabilities) == 0.80
+    assert decision_threshold_candidates()[0] == 0.70
+    assert decision_threshold_candidates()[-1] == 0.85
+    assert effective_decision_threshold(0.99) == 0.85
+    assert effective_decision_threshold(0.75) == 0.75
 
 
 def test_gatv2_accepts_language_annotated_graph_jsonl_but_xgboost_requires_code_schema(tmp_path):

@@ -7,6 +7,7 @@ from collections import Counter
 from typing import Any
 
 from attack_detection.contracts import EngineResult
+from attack_detection.source_masking import mask_non_executable_text
 from attack_detection.task_policy import is_active_finding
 
 from .behavior_chains import detect_behavior_chains
@@ -19,9 +20,14 @@ class StaticAnalysisEngine:
 
     def scan(self, content: str, language: str, raw_bytes: bytes | None = None) -> dict[str, Any]:
         start = time.perf_counter()
-        ioc_findings = classify_iocs(content, raw_bytes)
+        executable_content = mask_non_executable_text(content, language)
+        ioc_findings = classify_iocs(executable_content, raw_bytes)
         findings = list(ioc_findings)
-        deobfuscated = deobfuscate_source(content, language)
+        deobfuscated = deobfuscate_source(
+            executable_content,
+            language,
+            comments_masked=True,
+        )
         findings.extend(deobfuscated["findings"])
         metadata: dict[str, Any] = {
             "ioc_count": len(ioc_findings),
@@ -31,21 +37,30 @@ class StaticAnalysisEngine:
             "decoded_artifacts": deobfuscated["decoded"][:30],
             "transformed_preview": deobfuscated["transformed"][:4000],
         }
-        findings.extend(detect_behavior_chains(content))
+        findings.extend(detect_behavior_chains(
+            executable_content,
+            language,
+            comments_masked=True,
+        ))
         findings = [
             item for item in findings
             if isinstance(item, dict) and is_active_finding(item)
         ]
         counts = Counter(str(item.get("risk_type") or "context") for item in findings)
         malicious = counts["malicious"]
-        decision = "malicious" if malicious else "benign"
-        score = min(60, sum(int(item.get("severity") or 0) for item in findings) * 4)
-        metadata.update({"malicious_hits": malicious, "vulnerability_hits": 0, "context_hits": counts["context"]})
+        metadata.update({
+            "malicious_hits": malicious,
+            "vulnerability_hits": 0,
+            "context_hits": counts["context"],
+            "role": "explanation_only",
+            "affects_final_decision": False,
+            "affects_risk_score": False,
+        })
         return EngineResult(
             name=self.name,
             status="completed",
-            decision=decision,
-            risk_score=score,
+            decision="not_applicable",
+            risk_score=None,
             duration_ms=int((time.perf_counter() - start) * 1000),
             findings=findings[:160],
             metadata=metadata,

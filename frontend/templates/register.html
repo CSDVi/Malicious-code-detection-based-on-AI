@@ -1,15 +1,12 @@
 {% extends "base.html" %}
 {% block title %}注册 - 獬豸安码{% endblock %}
+{% block body_class %}auth-page{% endblock %}
 {% block content %}
-<section class="auth-wrap">
-    <div class="auth-card motion-card">
-        <h1>注册本地账号</h1>
-        <form method="post">
-            <div class="field"><label>用户名</label><input name="username" placeholder="至少 3 个字符" autocomplete="username"></div>
-            <div class="field"><label>密码</label><input name="password" type="password" placeholder="至少 6 个字符" autocomplete="new-password"></div>
-            <button class="primary-action" type="submit" style="width:100%">注册</button>
-        </form>
-        <p class="metric-sub" style="margin-top:16px"><a href="{{ url_for('main.login') }}">返回登录</a></p>
-    </div>
-</section>
+{% set auth_mode = "register" %}
+{% include "_auth_shell.html" %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/auth-switch.js') }}?v=20260731-panel-slide"></script>
+<script src="{{ url_for('static', filename='js/specular-buttons.js') }}?v=20260731-gold-rim" defer></script>
+<script type="module" src="{{ url_for('static', filename='js/liquid-ether-background.js') }}?v=20260731-adaptive-performance"></script>
 {% endblock %}

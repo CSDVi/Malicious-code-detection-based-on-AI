@@ -81,7 +81,7 @@ DISPLAY_ZH = {
     "Empty Exception Handler": "空异常处理",
     "Stack Trace Disclosure": "堆栈信息泄露",
     "Unbounded Resource Consumption": "无边界资源消耗",
-    "AI Semantic Risk": "AI语义风险",
+    "AI Semantic Risk": "AI语义异常（待细分类）",
     "ai_signal": "AI关注信号",
     "Command and Scripting Interpreter": "命令与脚本解释器",
     "Ingress Tool Transfer": "工具传入",

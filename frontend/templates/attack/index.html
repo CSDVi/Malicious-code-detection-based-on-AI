@@ -13,9 +13,9 @@
 </nav>
 
 {% if active_tab == 'file' %}
-<form class="detection-form" method="post" enctype="multipart/form-data">
+<form class="detection-form" method="post" enctype="multipart/form-data" data-file-scan-form>
     <section class="panel motion-card">
-        <div class="section-title compact-title"><div><h2>1. 选择模式</h2></div></div>
+        <div class="section-title compact-title"><div><h2>选择模式</h2></div></div>
         <div class="mode-selector">
             {% for value, label, description in [
                 ('auto','自动模式','XGBoost + 规则引擎 + 按需 CodeT5+ 220M / GATv2'),
@@ -24,9 +24,10 @@
         ('deep','深度模式','XGBoost + 规则引擎 + CodeT5+ 220M + GATv2')
             ] %}
             {% set state = mode_availability[value] %}
-            <label class="mode-option {% if not state.available %}disabled{% endif %}" title="{{ state.reason }}">
+            <label class="mode-option mode-border-glow {% if not state.available %}disabled{% endif %}" title="{{ state.reason }}" data-mode-border-glow>
+                <span class="mode-edge-light" aria-hidden="true"></span>
                 <input type="radio" name="mode" value="{{ value }}" {% if value == 'auto' %}checked{% endif %} {% if not state.available %}disabled{% endif %}>
-                <span><strong>{{ label }}</strong><small>{{ description }}</small></span>
+                <span class="mode-option-surface"><strong>{{ label }}</strong><small>{{ description }}</small></span>
             </label>
             {% endfor %}
         </div>
@@ -34,7 +35,7 @@
 
     <section class="section-block">
         <article class="panel motion-card">
-                <div class="section-title compact-title"><div><h2>2. 上传文件</h2><p>支持 {{ single_file_language_labels|join('、') }} 及 EXE/DLL/SYS/OCX，最大 20 MB。</p></div></div>
+                <div class="section-title compact-title"><div><h2>上传文件</h2><p>支持 {{ single_file_language_labels|join('、') }} 及 EXE/DLL/SYS/OCX，最大 20 MB。</p></div></div>
             <label class="upload-zone compact-upload">
                 <input type="file" name="code_file" accept="{{ single_file_accept }}" required>
                 <span class="upload-icon" aria-hidden="true"><i class="bi bi-file-earmark-code"></i></span>
@@ -48,7 +49,7 @@
 {% else %}
 <form class="detection-form" method="post" action="{{ url_for('attack.project_scan') }}" enctype="multipart/form-data" data-project-scan-form>
     <section class="panel motion-card">
-        <div class="section-title compact-title"><div><h2>1. 选择模式</h2></div></div>
+        <div class="section-title compact-title"><div><h2>选择模式</h2></div></div>
         <div class="mode-selector">
             {% for value, label, description in [
                 ('auto','自动模式','XGBoost + 按需 CodeT5+ 220M / 规则引擎'),
@@ -57,15 +58,16 @@
         ('deep','深度模式','XGBoost + CodeT5+ 220M + GATv2 + 规则引擎')
             ] %}
             {% set state = mode_availability[value] %}
-            <label class="mode-option {% if not state.available %}disabled{% endif %}" title="{{ state.reason }}">
+            <label class="mode-option mode-border-glow {% if not state.available %}disabled{% endif %}" title="{{ state.reason }}" data-mode-border-glow>
+                <span class="mode-edge-light" aria-hidden="true"></span>
                 <input type="radio" name="mode" value="{{ value }}" {% if value == 'auto' %}checked{% endif %} {% if not state.available %}disabled{% endif %}>
-                <span><strong>{{ label }}</strong><small>{{ description }}</small></span>
+                <span class="mode-option-surface"><strong>{{ label }}</strong><small>{{ description }}</small></span>
             </label>
             {% endfor %}
         </div>
     </section>
     <section class="panel motion-card section-block">
-        <div class="section-title compact-title"><div><h2>2. 上传项目</h2><p>当前仅支持 ZIP（.zip）压缩包，最大 1 GB。</p></div></div>
+        <div class="section-title compact-title"><div><h2>上传项目</h2><p>当前仅支持 ZIP（.zip）压缩包，最大 1 GB。</p></div></div>
         <label class="upload-zone project-upload">
             <input type="file" name="project_zip" accept=".zip" data-max-bytes="1073741824" required>
             <span class="upload-icon" aria-hidden="true"><i class="bi bi-file-earmark-zip"></i></span>
@@ -89,14 +91,14 @@
 {% if result %}
 <section class="result-header report-heading section-block">
     <div>
-        <span class="eyebrow">单文件检测报告</span>
+        <span class="eyebrow">文件检测报告</span>
         <h2>{{ result.filename }}</h2>
     </div>
     {% if record_id %}<a class="secondary-action result-export-action" href="{{ url_for('attack.record_report', record_id=record_id) }}">导出报告</a>{% endif %}
 </section>
 
 <section class="result-conclusion risk-surface-{{ result.risk_level }}">
-    <div class="result-verdict"><span>检测结论</span><strong>{% if result.risk_level == 'safe' %}正常{% else %}{{ result.risk_level|zh }}{% endif %}</strong></div>
+    <div class="result-verdict"><span>AI检测结论</span><strong>{{ result.final_decision|zh }}</strong></div>
     <div class="result-mode"><span>实际模式</span><strong>{{ result.effective_mode|zh }}</strong></div>
     <div class="risk-score-orb risk-score-{{ result.risk_level }}"><span>风险分</span><strong>{{ result.risk_score }}</strong></div>
 </section>
@@ -130,56 +132,12 @@
     </div>
 </section>
 
-<section class="grid-2 section-block">
-    {% for title, item in [('恶意代码检测', result.malicious_intent)] %}
-    <article class="metric-card model-result-card">
-        <div class="metric-label"><span>{{ title }}</span></div>
-        {% if item.available %}<div class="probability-value">{{ (item.probability * 100)|round(1) }}%</div><div class="model-result-state">{{ item.status|zh }}</div>
-        {% else %}<div class="unavailable-value">不可用</div>{% endif %}
-    </article>
-    {% endfor %}
-</section>
+{% include "attack/_file_report_insights.html" %}
 
-{% set xai = result.ai_explainability %}
-<section class="panel motion-card section-block ai-explanation-panel">
-    <div class="section-title compact-title"><div><h2>AI判断与证据</h2></div></div>
-    <div class="ai-explanation-summary">
-        <div><span>CodeT5+ 220M语义判断</span>{% if xai.codet5p.available %}<strong>{{ (xai.codet5p.probability * 100)|round(1) }}%</strong><small>{{ xai.codet5p.decision|zh }} · 文件级判断</small>{% else %}<strong>未执行</strong>{% endif %}</div>
-        <div><span>XGBoost快速判断</span>{% if xai.xgboost.available %}<strong>{{ (xai.xgboost.probability * 100)|round(1) }}%</strong>{% else %}<strong>不可用</strong>{% endif %}</div>
-        <div><span>最终判定主导</span><strong>{% if xai.decision_authority in ('ai', 'ai_with_rule_vulnerability') %}AI主判{% elif xai.decision_authority == 'rule_fallback' %}规则回退{% else %}未决{% endif %}</strong><small>{% if xai.rule_fallback_used %}仅因AI不可用、不确定或冲突才启用规则{% else %}规则只解释风险行、原因与修复方式{% endif %}</small></div>
-    </div>
-</section>
-
-<section class="section-block">
-    <article class="panel motion-card advice-panel">
-        <div class="section-title compact-title"><div><h2>修复建议</h2></div></div>
-        <ol class="advice-list">{% for suggestion in result.repair_suggestions %}<li>{{ suggestion }}</li>{% endfor %}</ol>
-        {% if result.remediation_references %}<div class="advice-sources"><span>建议依据</span>{% for reference in result.remediation_references %}<a href="{{ reference.url }}" target="_blank" rel="noopener noreferrer">{{ reference.title }}</a>{% endfor %}</div>{% endif %}
-    </article>
-</section>
-
-<section class="evidence-section section-block">
-    <div class="section-title compact-title"><div><h2>证据代码</h2></div><span class="evidence-count">{{ result.evidence_items|length }} 条</span></div>
-    <div class="evidence-list">
-        {% for evidence in result.evidence_items %}
-        <article class="evidence-item motion-card">
-            <header class="evidence-head">
-                <div><strong>第 {{ evidence.line or '未知' }} 行</strong><span>{{ evidence.risk_type|zh }}{% if evidence.rule_id %} · {{ evidence.rule_id }}{% endif %}{% if evidence.cwe %} · {{ evidence.cwe }}{% endif %}{% if evidence.owasp_category %} · {{ evidence.owasp_category }}{% endif %}{% if evidence.api_security_category %} · {{ evidence.api_security_category }}{% endif %}</span></div>
-                <div class="evidence-badges">
-                    <span class="basis-badge basis-{{ evidence.evidence_basis or 'rule_only' }}">{% if evidence.evidence_basis == 'ai_decision' %}AI主判{% elif evidence.evidence_basis == 'ai_and_rule' %}AI与规则一致{% elif evidence.evidence_basis == 'ai_only' %}AI重点关注{% else %}规则解释{% endif %}</span>
-                    {% if evidence.ai_attribution %}<span class="suspicion-badge">AI行贡献 {{ evidence.ai_attribution.contribution_percent }}%</span>{% else %}<span class="suspicion-badge">可疑度 {{ evidence.suspicion_score }}/100</span>{% endif %}
-                </div>
-            </header>
-            {% if evidence.code_context %}<pre class="evidence-code">{% for row in evidence.code_context %}<span class="{% if row.is_target %}target-line{% endif %}"><b>{{ row.line }}</b><code>{{ row.code }}</code></span>{% endfor %}</pre>{% elif evidence.snippet %}<pre class="evidence-code"><span class="target-line"><b>{{ evidence.line }}</b><code>{{ evidence.snippet }}</code></span></pre>{% endif %}
-            <div class="evidence-explanation-grid">
-                <div><strong>危害</strong><p>{{ evidence.harm or evidence.description }}</p>{% if evidence.risk_domains %}<small>风险范围：{{ evidence.risk_domains|join('、') }}</small>{% endif %}</div>
-                <div><strong>检测依据</strong><p>{{ evidence.basis_text or evidence.description }}</p>{% if evidence.ai_attribution %}<small>遮挡该行后，XGBoost恶意概率下降 {{ (evidence.ai_attribution.probability_drop * 100)|round(2) }} 个百分点。贡献度只解释模型判断，不是漏洞概率。</small>{% endif %}</div>
-                {% if evidence.repair_suggestions %}<div class="evidence-remediation"><strong>修复建议</strong><ol>{% for suggestion in evidence.repair_suggestions[:3] %}<li>{{ suggestion }}</li>{% endfor %}</ol></div>{% endif %}
-            </div>
-        </article>
-        {% else %}<div class="empty-state evidence-empty"><span>{% if result.final_decision == 'unknown' %}模型给出了风险提示，但未找到可定位代码证据，当前结论需人工复核{% else %}未发现可定位到具体代码行的风险证据{% endif %}</span></div>{% endfor %}
-    </div>
-</section>
+{% set evidence_groups = file_report_insights.evidence_groups %}
+{% set evidence_total = result.evidence_items|length %}
+{% if result.final_decision == 'malicious' %}{% set evidence_empty_message = 'AI已判定文件恶意，但本次没有生成可靠的行级定位；文件级结论不会伪装成“未知行”' %}{% elif result.final_decision == 'unknown' %}{% set evidence_empty_message = 'AI未形成可靠结论，当前结果需人工复核' %}{% else %}{% set evidence_empty_message = 'AI未判定该文件恶意，因此没有生成恶意点解释' %}{% endif %}
+{% include "attack/_evidence_groups.html" %}
 
 <details class="technical-details section-block">
     <summary><span>检测组件技术详情</span></summary>
@@ -201,32 +159,42 @@
 
 {% if project_result %}
 <section class="result-header report-heading section-block"><div><span class="eyebrow">项目检测报告</span><h2>{{ project_result.project_name }}</h2></div></section>
-<section class="grid-4 project-summary-cards">
-    <article class="metric-card"><div class="metric-label"><span>项目风险</span></div><div class="metric-value text-value">{{ project_result.risk_level|zh }}</div></article>
-    <article class="metric-card"><div class="metric-label"><span>已检测文件</span></div><div class="metric-value">{{ project_result.file_count }}</div></article>
-    <article class="metric-card"><div class="metric-label"><span>AI参与率</span></div><div class="metric-value">{{ project_result.ai_participation_rate or 0 }}%</div></article>
-    <article class="metric-card"><div class="metric-label"><span>平均风险分</span></div><div class="metric-value">{{ project_result.average_score }}</div></article>
-    <article class="metric-card"><div class="metric-label"><span>扫描警告</span></div><div class="metric-value">{{ project_result.warning_count }}</div></article>
+<section class="project-summary-cards">
+    <article class="metric-card project-risk-card risk-surface-{{ project_result.risk_level }}">
+        <div class="project-risk-copy">
+            <div class="metric-label"><span>项目风险</span></div>
+            <div class="project-risk-level">{% if project_result.risk_level == 'safe' %}安全{% else %}{{ project_result.risk_level|zh }}{% endif %}</div>
+            <div class="project-risk-details">
+                <span>已检测文件<strong>{{ project_result.file_count }}</strong></span>
+                <span class="{% if project_result.warning_count %}has-warning{% endif %}">扫描警告<strong>{{ project_result.warning_count }}</strong></span>
+            </div>
+        </div>
+        <div class="risk-score-orb risk-score-{{ project_result.risk_level }}"><span>项目风险分</span><strong>{{ project_result.risk_score }}</strong></div>
+    </article>
 </section>
-{% if project_result.project_engines %}
-<section class="table-panel motion-card section-block">
-    <div class="section-title compact-title"><div><h2>项目图模型</h2></div></div>
-    <div class="table-scroll"><table class="data-table"><thead><tr><th>引擎</th><th>状态</th><th>结论</th><th>校准概率</th><th>阈值</th><th>版本 / 原因</th></tr></thead><tbody>
-{% for engine in project_result.project_engines if engine.name in ('xgboost_project_malicious', 'gatv2') and engine.status == 'completed' %}<tr><td>{{ engine.name|zh }}</td><td>{{ engine.status|zh }}</td><td>{{ engine.decision|zh }}</td><td>{{ (engine.probability * 100)|round(1) ~ '%' if engine.probability is not none else '未输出' }}</td><td>{{ engine.threshold if engine.threshold is not none else '未输出' }}</td><td>{{ engine.model_version or '未记录' }}</td></tr>{% else %}<tr><td colspan="6">本次没有完成项目图模型分析</td></tr>{% endfor %}
-    </tbody></table></div>
-</section>
-{% endif %}
-<section class="table-panel motion-card section-block" data-paginated-table data-page-size="10">
+{% include "attack/_project_report_insights.html" %}
+<section class="table-panel motion-card section-block project-files-panel" id="project-files" data-paginated-table data-page-size="10">
     <div class="section-title compact-title"><div><h2>项目文件</h2></div></div>
-    <div class="table-scroll"><table class="data-table"><thead><tr><th>序号</th><th>文件</th><th>语言</th><th>结论</th><th>判定来源</th><th>风险</th><th>实际模式</th><th>详情</th></tr></thead><tbody>
+    <div class="table-scroll project-file-table-scroll"><table class="data-table project-files-table">
+        <colgroup>
+            <col class="project-file-col-serial">
+            <col class="project-file-col-path">
+            <col class="project-file-col-language">
+            <col class="project-file-col-decision">
+            <col class="project-file-col-authority">
+            <col class="project-file-col-risk">
+            <col class="project-file-col-mode">
+            <col class="project-file-col-detail">
+        </colgroup>
+        <thead><tr><th>序号</th><th>文件</th><th>语言</th><th>结论</th><th>判定来源</th><th>风险</th><th>实际模式</th><th>详情</th></tr></thead><tbody>
 {% for item in project_result.display_files %}
-        <tr data-page-row data-project-serial="{{ item.project_serial }}" data-file-search="{{ item.filename|lower }}" data-file-extension="{{ item.file_extension }}">
+        <tr data-page-row data-project-serial="{{ item.project_serial }}" data-file-search="{{ item.filename|lower }}" data-file-extension="{{ item.file_extension }}" data-file-language="{{ item.filter_language }}" data-risk-level="{{ item.risk_level }}">
             <td><strong>{{ item.project_serial }}</strong></td>
-            <td>{{ item.filename }}</td>
+            <td><span class="project-file-path" title="{{ item.filename }}">{{ item.filename }}</span></td>
             {% if item.scan_status == 'skipped' %}
             <td>—</td><td>未检测</td><td>—</td><td>—</td><td>已跳过</td><td><span class="empty-inline">{{ item.reason }}</span></td>
             {% else %}
-            <td>{{ item.display_language|zh }}</td><td>{{ item.final_decision|zh }}</td><td>{% if item.decision_authority in ('ai', 'ai_with_rule_vulnerability') %}AI主判{% elif item.decision_authority == 'rule_fallback' %}规则回退{% elif item.decision_authority == 'external_context' %}外部情报{% else %}未决{% endif %}</td><td><span class="risk-badge" data-risk-level="{{ item.risk_level }}">{{ item.risk_level|zh }} / {{ item.risk_score }}</span></td><td>{{ item.effective_mode|zh }}</td><td>{% if item.detail_available %}<a class="secondary-action compact-button" href="{{ url_for('attack.project_file_detail', job_id=job.id, file_index=item.detail_index) }}"><i class="bi bi-search"></i>查看恶意点</a>{% else %}<span class="empty-inline">快速初筛</span>{% endif %}</td>
+            <td>{{ item.display_language|zh }}</td><td>{{ item.final_decision|zh }}</td><td>{% if item.decision_authority == 'ai' %}AI主判{% elif item.decision_authority == 'rule_fallback' %}历史规则结果{% else %}需人工复核{% endif %}</td><td><span class="risk-badge" data-risk-level="{{ item.risk_level }}">{{ item.risk_level|zh }} / {{ item.risk_score }}</span></td><td>{{ item.effective_mode|zh }}</td><td>{% if item.detail_available %}<a class="secondary-action compact-button" href="{{ url_for('attack.project_file_detail', job_id=job.id, file_index=item.detail_index) }}"><i class="bi bi-search"></i>查看恶意点</a>{% else %}<span class="empty-inline">快速初筛</span>{% endif %}</td>
             {% endif %}
         </tr>
 {% else %}<tr><td colspan="8"><div class="empty-state">项目中没有可展示的文件结果</div></td></tr>{% endfor %}
@@ -243,13 +211,25 @@
             <button class="secondary-action compact-button" type="button" data-page-next>下一页</button>
             <button class="secondary-action compact-button" type="button" data-page-last>尾页</button>
         </div>
-        <details class="extension-filter">
-            <summary>文件类型 <span data-extension-summary>全部</span></summary>
-            <div class="extension-filter-menu">
-                <label class="extension-filter-all"><input type="checkbox" data-extension-all checked>全选</label>
-                {% for extension in project_result.file_extensions %}
-                <label><input type="checkbox" value="{{ extension.value }}" data-extension-option checked><span>{{ extension.label }}</span><small>{{ extension.count }}</small></label>
-                {% endfor %}
+        <details class="extension-filter project-tree-filter">
+            <summary><i class="bi bi-funnel"></i>筛选 <span data-filter-summary>全部</span></summary>
+            <div class="extension-filter-menu project-filter-tree">
+                <div class="project-filter-root" role="radiogroup" aria-label="筛选维度">
+                    <label><input type="radio" name="project-file-filter-kind" value="language" data-filter-kind checked><span>语言</span></label>
+                    <label><input type="radio" name="project-file-filter-kind" value="risk" data-filter-kind><span>危险等级</span></label>
+                </div>
+                <div class="project-filter-branch" data-filter-branch="language">
+                    <label class="extension-filter-all"><input type="checkbox" data-filter-all="language" checked>全部语言</label>
+                    {% for language in project_result.file_language_filters %}
+                    <label><input type="checkbox" value="{{ language.value }}" data-filter-option data-filter-group="language" data-filter-label="{{ language.label|zh }}" checked><span>{{ language.label|zh }}</span><small>{{ language.count }}</small></label>
+                    {% endfor %}
+                </div>
+                <div class="project-filter-branch" data-filter-branch="risk" hidden>
+                    <label class="extension-filter-all"><input type="checkbox" data-filter-all="risk" checked>全部危险等级</label>
+                    {% for risk in project_result.file_risk_filters %}
+                    <label><input type="checkbox" value="{{ risk.value }}" data-filter-option data-filter-group="risk" data-filter-label="{{ risk.label }}" checked><span>{{ risk.label }}</span><small>{{ risk.count }}</small></label>
+                    {% endfor %}
+                </div>
             </div>
         </details>
     </nav>
@@ -268,24 +248,30 @@
         <div class="scan-scope-item">
             <h3>深度复核文件数目为 {{ project_result.deep_scanned_file_count or 0 }} 项，其余为快速初筛</h3>
             <p>快速初筛文件数目为 {{ project_result.quick_only_file_count or 0 }} 项。</p>
-            <p>AI已参与 {{ project_result.ai_participated_file_count or 0 }} / {{ project_result.ai_eligible_file_count or 0 }} 个可用源码文件，其中AI主判 {{ project_result.ai_primary_decision_file_count or 0 }} 个、规则回退 {{ project_result.rule_fallback_file_count or 0 }} 个。</p>
-            <p>本次实际执行模型：{{ project_result.ai_models_executed|join('、') if project_result.ai_models_executed else '无' }}。</p>
         </div>
     </div>
-    {% if project_result.other_warnings %}
-    <div class="scan-scope-other"><strong>其他限制说明</strong><ul>{% for warning in project_result.other_warnings %}<li>{{ warning }}</li>{% endfor %}</ul></div>
-    {% endif %}
+    <div class="scan-scope-other">
+        <strong>其他限制说明</strong>
+        <p>扫描警告表示检测覆盖受到限制，不代表发现了恶意代码，也不参与项目风险分。本次共 {{ project_result.warning_count }} 条：跳过或受限文件 {{ project_result.warning_breakdown.skipped_file_count }} 个，其他检测限制 {{ project_result.warning_breakdown.other_limit_count }} 条。被跳过的文件没有进入完整检测，可能使报告只覆盖项目的一部分。</p>
+        {% if project_result.skipped_reason_counts or project_result.other_warnings %}
+        <ul>
+            {% for item in project_result.skipped_reason_counts %}<li>{{ item.reason }}：{{ item.count }} 个文件；具体文件见上方“已跳过或受限文件”。</li>{% endfor %}
+            {% for warning in project_result.other_warnings %}<li>检测过程限制：{{ warning }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+    </div>
 </section>
 {% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/mode-border-glow.js') }}?v=20260731-black-gold-edge"></script>
 {% if job and job.status not in ['completed', 'failed', 'cancelled'] %}
 <script>
 (function pollJob(){
     fetch("{{ url_for('attack.job_status', job_id=job.id) }}").then(function(response){ return response.json(); }).then(function(data){
         const label = document.querySelector("[data-job-status]");
-        if (label) label.textContent = data.status === "queued" ? "等待执行" : data.status === "running" ? "正在检测" : data.status;
+        if (label) label.textContent = data.stage || (data.status === "queued" ? "等待执行" : data.status === "running" ? "正在检测" : data.status);
         if (["completed", "failed", "cancelled"].includes(data.status)) window.location.reload();
         else setTimeout(pollJob, 1200);
     }).catch(function(){ setTimeout(pollJob, 2000); });

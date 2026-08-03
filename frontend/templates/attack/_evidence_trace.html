@@ -1,0 +1,13 @@
+{% if evidence.trace_steps %}
+<div class="evidence-trace">
+    <div class="evidence-trace-heading"><strong>代码关联路径</strong><span>静态分析还原输入到敏感操作的近似关联；AI高贡献位置会单独标记</span></div>
+    <ol>
+        {% for step in evidence.trace_steps %}
+        <li class="trace-step trace-step-{{ step.kind or 'indicator' }}">
+            <i>{{ loop.index }}</i>
+            <div><strong>{{ step.stage or step.label or step.kind|zh }}</strong><span>{% if step.line %}第 {{ step.line }} 行{% else %}文件级{% endif %}{% if step.ai_supported %}<em class="trace-ai-badge">AI关注 · 贡献 {{ step.ai_attribution.contribution_percent }}%</em>{% endif %}</span>{% if step.snippet %}<code>{{ step.snippet }}</code>{% endif %}</div>
+        </li>
+        {% endfor %}
+    </ol>
+</div>
+{% endif %}

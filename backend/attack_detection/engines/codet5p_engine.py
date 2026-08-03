@@ -337,6 +337,7 @@ class CodeT5PEngine:
             return self._unavailable(started, "CodeT5+ 220M did not return the active malicious-code task")
         task_probabilities = output.get("task_probabilities") or {}
         task_thresholds = output.get("task_thresholds") or {}
+        task_trained_thresholds = output.get("task_trained_thresholds") or {}
         task_versions = output.get("task_versions") or {}
         return EngineResult(
             name=self.name,
@@ -353,6 +354,10 @@ class CodeT5PEngine:
                 },
                 "task_thresholds": {
                     "malicious_intent": task_thresholds.get("malicious_intent"),
+                },
+                "trained_threshold": output.get("trained_threshold"),
+                "task_trained_thresholds": {
+                    "malicious_intent": task_trained_thresholds.get("malicious_intent"),
                 },
                 "task_versions": {
                     "malicious_intent": task_versions.get("malicious_intent"),

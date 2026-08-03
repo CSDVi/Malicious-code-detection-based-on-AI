@@ -21,7 +21,7 @@ PROJECT_INFERENCE_TIMEOUT_SECONDS = max(
     5.0,
     float(os.environ.get(
         "XIEZHI_GAT_PROJECT_TIMEOUT_SECONDS",
-        "12",
+        "60",
     )),
 )
 
@@ -116,6 +116,12 @@ class GATEngine:
             return EngineResult(
                 name=self.name, status="failed", error=f"GATv2 inference process failed: {exc}",
                 duration_ms=int((time.perf_counter() - start) * 1000),
+                metadata={
+                    "node_count": graph.get("node_count"),
+                    "edge_count": graph.get("edge_count"),
+                    "project_languages": sorted(graph_languages),
+                    "timeout_seconds": PROJECT_INFERENCE_TIMEOUT_SECONDS,
+                },
             ).to_dict()
         if completed.returncode != 0:
             return EngineResult(

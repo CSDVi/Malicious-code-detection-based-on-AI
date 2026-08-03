@@ -32,7 +32,14 @@
         "malicious_intent"
       ],
       "task": "malicious_intent",
-      "threshold": 0.99,
+      "threshold": 0.8,
+      "trained_threshold": 0.99,
+      "threshold_policy": {
+        "minimum_language_threshold": 0.7,
+        "preferred_center": 0.8,
+        "maximum_decision_threshold": 0.85,
+        "applied_to_existing_artifact": true
+      },
       "test_metrics": {
         "accuracy": 0.994535519125683,
         "precision": 0.9848484848484849,
@@ -110,7 +117,14 @@
         "malicious_intent"
       ],
       "task": "malicious_intent",
-      "threshold": 0.89,
+      "threshold": 0.8,
+      "trained_threshold": 0.89,
+      "threshold_policy": {
+        "minimum_language_threshold": 0.7,
+        "preferred_center": 0.8,
+        "maximum_decision_threshold": 0.85,
+        "applied_to_existing_artifact": true
+      },
       "test_metrics": {
         "accuracy": 0.9833333333333333,
         "precision": 0.9931972789115646,
@@ -149,7 +163,14 @@
         "malicious_intent"
       ],
       "task": "malicious_intent",
-      "threshold": 0.99,
+      "threshold": 0.8,
+      "trained_threshold": 0.99,
+      "threshold_policy": {
+        "minimum_language_threshold": 0.7,
+        "preferred_center": 0.8,
+        "maximum_decision_threshold": 0.85,
+        "applied_to_existing_artifact": true
+      },
       "test_metrics": {
         "accuracy": 0.9884169884169884,
         "precision": 0.9894736842105263,
@@ -266,7 +287,14 @@
         "malicious_intent"
       ],
       "task": "malicious_intent",
-      "threshold": 0.96,
+      "threshold": 0.8,
+      "trained_threshold": 0.96,
+      "threshold_policy": {
+        "minimum_language_threshold": 0.7,
+        "preferred_center": 0.8,
+        "maximum_decision_threshold": 0.85,
+        "applied_to_existing_artifact": true
+      },
       "test_metrics": {
         "accuracy": 0.9445843828715366,
         "precision": 0.9251700680272109,

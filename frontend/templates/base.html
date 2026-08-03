@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}獬豸安码{% endblock %}</title>
     <link href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}?v=1.11.3" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/style.css') }}?v=20260731-card-transitions" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}?v=20260731-minimal-history-search" rel="stylesheet">
 </head>
 <body class="{% block body_class %}{% endblock %}">
 <div class="app-shell">
@@ -15,17 +15,21 @@
             <nav class="module-cards" aria-label="主导航">
                 <span class="module-nav-balance" aria-hidden="true"></span>
                 <div class="module-links">
-                    <a class="module-card {% if request.path == '/' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
-                        <span>系统总览</span>
+                    <a class="module-card {% if request.path == '/' %}active{% endif %}" href="{{ url_for('main.dashboard') }}" {% if request.path == '/' %}aria-current="page"{% endif %}>
+                        <i class="bi bi-house-door" aria-hidden="true"></i>
+                        <span class="module-card-label">系统总览</span>
                     </a>
-                    <a class="module-card {% if request.path in ['/attack/', '/attack/project'] %}active{% endif %}" href="{{ url_for('attack.index') }}">
-                        <i class="bi bi-search"></i><span>检测中心</span>
+                    <a class="module-card {% if request.path in ['/attack/', '/attack/project'] %}active{% endif %}" href="{{ url_for('attack.index') }}" {% if request.path in ['/attack/', '/attack/project'] %}aria-current="page"{% endif %}>
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span class="module-card-label">检测中心</span>
                     </a>
-                    <a class="module-card {% if request.path.startswith('/attack/history') or request.path.startswith('/attack/record') %}active{% endif %}" href="{{ url_for('attack.history') }}">
-                        <span>历史记录</span>
+                    <a class="module-card {% if request.path.startswith('/attack/history') or request.path.startswith('/attack/record') %}active{% endif %}" href="{{ url_for('attack.history') }}" {% if request.path.startswith('/attack/history') or request.path.startswith('/attack/record') %}aria-current="page"{% endif %}>
+                        <i class="bi bi-clock-history" aria-hidden="true"></i>
+                        <span class="module-card-label">历史记录</span>
                     </a>
-                    <a class="module-card {% if request.path.startswith('/attack/models') or request.path.startswith('/attack/evaluation') %}active{% endif %}" href="{{ url_for('attack.models') }}">
-                        <span>模型中心</span>
+                    <a class="module-card {% if request.path.startswith('/attack/models') or request.path.startswith('/attack/evaluation') %}active{% endif %}" href="{{ url_for('attack.models') }}" {% if request.path.startswith('/attack/models') or request.path.startswith('/attack/evaluation') %}aria-current="page"{% endif %}>
+                        <i class="bi bi-cpu" aria-hidden="true"></i>
+                        <span class="module-card-label">模型中心</span>
                     </a>
                 </div>
                 <div class="topbar-actions">
@@ -33,7 +37,7 @@
                     <a class="ghost-action" href="{{ url_for('main.logout') }}">退出</a>
                 </div>
             </nav>
-            <section id="scan-job-tray" class="scan-job-tray" data-jobs-url="{{ url_for('attack.job_list') }}" data-project-url="{{ url_for('attack.project_scan') }}" hidden>
+            <section id="scan-job-tray" class="scan-job-tray" data-jobs-url="{{ url_for('attack.job_list') }}" data-file-url="{{ url_for('attack.index') }}" data-project-url="{{ url_for('attack.project_scan') }}" hidden>
                 <div class="scan-job-tray-list" data-job-list></div>
             </section>
             {% endif %}
@@ -117,7 +121,7 @@ document.addEventListener("visibilitychange", function() {
     }
 });
 </script>
-<script src="{{ url_for('static', filename='js/app.js') }}?v=20260731-card-transitions"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v=20260801-file-scan-progress"></script>
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>

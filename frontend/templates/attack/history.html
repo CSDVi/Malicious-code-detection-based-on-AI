@@ -5,58 +5,139 @@
     <div><h1>历史记录</h1></div>
 </section>
 
-<form class="filter-bar panel motion-card" method="get">
-    <label class="search-field"><i class="bi bi-search"></i><input type="search" name="q" value="{{ filters.q }}" placeholder="搜索文件名或哈希值"></label>
-    <label><span>风险</span><select name="risk"><option value="">全部</option>{% for value, label in [('critical','严重'),('high','高危'),('medium','中危'),('low','低危'),('safe','安全')] %}<option value="{{ value }}" {% if filters.risk == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-    <label><span>模式</span><select name="mode"><option value="">全部</option>{% for value, label in [('quick','快速'),('standard','标准'),('deep','深度')] %}<option value="{{ value }}" {% if filters.mode == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-    <label><span>开始日期</span><input type="date" name="date_from" value="{{ filters.date_from }}"></label>
-    <label><span>结束日期</span><input type="date" name="date_to" value="{{ filters.date_to }}"></label>
-    <button class="primary-action" type="submit">筛选</button>
-    <a class="secondary-action compact-button" href="{{ url_for('attack.history') }}">清除筛选</a>
+<form class="filter-bar panel motion-card history-search-bar" method="get" role="search">
+    <div class="history-search-control">
+        <input type="search" name="q" value="{{ filters.q }}" placeholder="搜索文件名、项目名或哈希值" aria-label="搜索历史记录">
+        <button class="history-search-submit" type="submit" aria-label="搜索历史记录" title="搜索">
+            <i class="bi bi-search" aria-hidden="true"></i>
+        </button>
+    </div>
+    <input type="hidden" name="project_risk" value="{{ filters.project_risk }}">
+    <input type="hidden" name="file_risk" value="{{ filters.file_risk }}">
+    <input type="hidden" name="file_type" value="{{ filters.file_type }}">
 </form>
 
-{% if project_jobs %}
-<section class="table-panel motion-card section-block">
-    <div class="section-title compact-title"><div><h2>项目检测记录</h2></div></div>
-    <div class="table-scroll"><table class="data-table">
-        <thead><tr><th>任务</th><th>项目</th><th>状态</th><th>结论</th><th>风险</th><th>时间</th><th></th></tr></thead>
-        <tbody>
-        {% for job in project_jobs %}
-        <tr><td><code>{{ job.id[:12] }}</code></td><td><strong>{{ job.target_name }}</strong><small class="cell-sub">{{ job.mode|zh }} · {{ job.total_files or 0 }} 个文件</small></td><td>{{ job.status|zh }}</td><td>{{ (job.final_decision or 'unknown')|zh }}</td><td>{% if job.risk_score is not none %}<span class="risk-badge" data-risk-level="{{ job.risk_level }}">{{ job.risk_level|zh }} / {{ job.risk_score }}</span>{% else %}暂无{% endif %}</td><td>{{ (job.created_at|string)[:16]|replace('T', ' ') }}</td><td>{% if job.status == 'completed' %}<a class="secondary-action compact-button" href="{{ url_for('attack.project_scan', job_id=job.id) }}">查看</a>{% endif %}</td></tr>
-        {% endfor %}
-        </tbody>
-    </table></div>
+<section class="table-panel motion-card section-block history-record-section" data-proximity-list>
+    <div class="section-title compact-title history-section-heading">
+        <div>
+            <h2>项目检测记录</h2>
+            <p>当前筛选结果 {{ project_pagination.total }} 条，每页显示 10 条</p>
+        </div>
+        <form class="history-section-filter" method="get">
+            <input type="hidden" name="q" value="{{ filters.q }}">
+            <input type="hidden" name="file_page" value="{{ file_pagination.page }}">
+            <input type="hidden" name="file_risk" value="{{ filters.file_risk }}">
+            <input type="hidden" name="file_type" value="{{ filters.file_type }}">
+            <label>
+                <span>风险大小</span>
+                <select name="project_risk">
+                    <option value="">全部风险</option>
+                    {% for value, label in [('critical','严重'),('high','高危'),('medium','中危'),('low','低危'),('safe','安全')] %}
+                    <option value="{{ value }}" {% if filters.project_risk == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button class="primary-action compact-button" type="submit">筛选项目</button>
+            <a class="secondary-action compact-button" href="{{ url_for('attack.history', q=filters.q, file_page=file_pagination.page, file_risk=filters.file_risk, file_type=filters.file_type) }}">重置</a>
+        </form>
+    </div>
+    <div class="table-scroll">
+        <table class="data-table history-record-table history-project-table">
+            <thead><tr><th>任务</th><th>项目</th><th>状态</th><th>结论</th><th>风险</th><th>时间</th><th></th></tr></thead>
+            <tbody>
+            {% for job in project_jobs %}
+            <tr data-proximity-card>
+                <td><code>{{ job.id[:12] }}</code></td>
+                <td><strong>{{ job.target_name }}</strong></td>
+                <td>{{ job.status|zh }}</td>
+                <td>{{ (job.final_decision or 'unknown')|zh }}</td>
+                <td>{% if job.risk_score is not none %}<span class="risk-badge" data-risk-level="{{ job.risk_level }}">{{ job.risk_level|zh }} / {{ job.risk_score }}</span>{% else %}暂无{% endif %}</td>
+                <td>{{ (job.created_at|string)[:16]|replace('T', ' ') }}</td>
+                <td>{% if job.status == 'completed' %}<a class="secondary-action compact-button" href="{{ url_for('attack.project_scan', job_id=job.id) }}">查看</a>{% endif %}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7"><div class="empty-state">没有符合风险筛选条件的项目检测记录</div></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <nav class="history-pagination" aria-label="项目检测记录分页">
+        <a class="secondary-action compact-button {% if not project_pagination.has_previous %}is-disabled{% endif %}" href="{{ url_for('attack.history', q=filters.q, project_page=1, project_risk=filters.project_risk, file_page=file_pagination.page, file_risk=filters.file_risk, file_type=filters.file_type) }}" {% if not project_pagination.has_previous %}aria-disabled="true" tabindex="-1"{% endif %}>首页</a>
+        <a class="secondary-action compact-button {% if not project_pagination.has_previous %}is-disabled{% endif %}" href="{{ url_for('attack.history', q=filters.q, project_page=project_pagination.previous_page, project_risk=filters.project_risk, file_page=file_pagination.page, file_risk=filters.file_risk, file_type=filters.file_type) }}" {% if not project_pagination.has_previous %}aria-disabled="true" tabindex="-1"{% endif %}>上一页</a>
+        <span>第 {{ project_pagination.page }} / {{ project_pagination.total_pages }} 页</span>
+        <a class="secondary-action compact-button {% if not project_pagination.has_next %}is-disabled{% endif %}" href="{{ url_for('attack.history', q=filters.q, project_page=project_pagination.next_page, project_risk=filters.project_risk, file_page=file_pagination.page, file_risk=filters.file_risk, file_type=filters.file_type) }}" {% if not project_pagination.has_next %}aria-disabled="true" tabindex="-1"{% endif %}>下一页</a>
+        <a class="secondary-action compact-button {% if not project_pagination.has_next %}is-disabled{% endif %}" href="{{ url_for('attack.history', q=filters.q, project_page=project_pagination.total_pages, project_risk=filters.project_risk, file_page=file_pagination.page, file_risk=filters.file_risk, file_type=filters.file_type) }}" {% if not project_pagination.has_next %}aria-disabled="true" tabindex="-1"{% endif %}>末页</a>
+    </nav>
 </section>
-{% endif %}
 
 <form id="compare-form" method="get" action="{{ url_for('attack.compare_records') }}">
     <input type="hidden" name="left" id="compare-left">
     <input type="hidden" name="right" id="compare-right">
-    <section class="table-panel motion-card section-block">
-        <div class="section-title compact-title">
-            <div><h2>单文件检测记录</h2><p>当前筛选结果 {{ records|length }} 条</p></div>
-            <button class="secondary-action" id="compare-button" type="submit" disabled><span>对比所选记录</span></button>
+</form>
+
+<section class="table-panel motion-card section-block history-record-section" data-proximity-list>
+    <div class="section-title compact-title history-section-heading history-file-heading">
+        <div>
+            <h2>文件检测记录</h2>
+            <p>当前筛选结果 {{ file_pagination.total }} 条，每页显示 10 条</p>
         </div>
-        <div class="table-scroll"><table class="data-table selectable-table">
-            <thead><tr><th class="select-column"></th><th>记录</th><th>文件</th><th>结论</th><th>风险</th><th>模式</th><th>类别</th><th>时间</th><th></th></tr></thead>
+        <form class="history-section-filter history-file-filter" method="get">
+            <input type="hidden" name="q" value="{{ filters.q }}">
+            <input type="hidden" name="project_page" value="{{ project_pagination.page }}">
+            <input type="hidden" name="project_risk" value="{{ filters.project_risk }}">
+            <label>
+                <span>文件类型</span>
+                <select name="file_type">
+                    <option value="">全部类型</option>
+                    {% for value, label in file_type_options %}
+                    <option value="{{ value }}" {% if filters.file_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>风险大小</span>
+                <select name="file_risk">
+                    <option value="">全部风险</option>
+                    {% for value, label in [('critical','严重'),('high','高危'),('medium','中危'),('low','低危'),('safe','安全')] %}
+                    <option value="{{ value }}" {% if filters.file_risk == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button class="primary-action compact-button" type="submit">筛选文件</button>
+            <a class="secondary-action compact-button" href="{{ url_for('attack.history', q=filters.q, project_page=project_pagination.page, project_risk=filters.project_risk) }}">重置</a>
+        </form>
+        <button class="secondary-action" id="compare-button" type="submit" form="compare-form" disabled><span>对比所选记录</span></button>
+    </div>
+    <div class="table-scroll">
+        <table class="data-table selectable-table history-record-table history-file-table">
+            <thead><tr><th class="select-column"></th><th>记录</th><th>文件</th><th>类型</th><th>结论</th><th>风险</th><th>模式</th><th>时间</th><th></th></tr></thead>
             <tbody>
             {% for item in records %}
-            <tr>
+            <tr data-proximity-card>
                 <td><input class="record-checkbox" type="checkbox" value="{{ item.id }}" aria-label="选择记录 {{ item.id }}"></td>
                 <td>#{{ item.id }}</td>
-                <td><strong>{{ item.filename }}</strong><small class="cell-sub">{{ item.display_language|zh }} · {{ item.file_hash[:10] }}...</small></td>
+                <td><strong>{{ item.filename }}</strong></td>
+                <td><span class="data-tag compact-tag">{{ item.file_type_label }}</span></td>
                 <td>{{ item.final_decision|zh }}</td>
                 <td><span class="risk-badge" data-risk-level="{{ item.risk_level }}">{{ item.risk_level|zh }} / {{ item.risk_score }}</span></td>
                 <td>{{ (item.effective_mode or '未记录')|zh }}</td>
-                <td>{% for category in item.categories[:2] %}<span class="data-tag compact-tag">{{ category|zh }}</span>{% else %}暂无{% endfor %}</td>
                 <td>{{ item.created_at[:16]|replace('T', ' ') }}</td>
                 <td><a class="secondary-action compact-button" href="{{ url_for('attack.record', record_id=item.id) }}">查看</a></td>
             </tr>
-            {% else %}<tr><td colspan="9"><div class="empty-state">没有符合筛选条件的单文件检测记录</div></td></tr>{% endfor %}
+            {% else %}
+            <tr><td colspan="9"><div class="empty-state">没有符合类型或风险筛选条件的文件检测记录</div></td></tr>
+            {% endfor %}
             </tbody>
-        </table></div>
-    </section>
-</form>
+        </table>
+    </div>
+    <nav class="history-pagination" aria-label="文件检测记录分页">
+        <a class="secondary-action compact-button {% if not file_pagination.has_previous %}is-disabled{% endif %}" href="{{ url_for('attack.history', q=filters.q, project_page=project_pagination.page, project_risk=filters.project_risk, file_page=1, file_risk=filters.file_risk, file_type=filters.file_type) }}" {% if not file_pagination.has_previous %}aria-disabled="true" tabindex="-1"{% endif %}>首页</a>
+        <a class="secondary-action compact-button {% if not file_pagination.has_previous %}is-disabled{% endif %}" href="{{ url_for('attack.history', q=filters.q, project_page=project_pagination.page, project_risk=filters.project_risk, file_page=file_pagination.previous_page, file_risk=filters.file_risk, file_type=filters.file_type) }}" {% if not file_pagination.has_previous %}aria-disabled="true" tabindex="-1"{% endif %}>上一页</a>
+        <span>第 {{ file_pagination.page }} / {{ file_pagination.total_pages }} 页</span>
+        <a class="secondary-action compact-button {% if not file_pagination.has_next %}is-disabled{% endif %}" href="{{ url_for('attack.history', q=filters.q, project_page=project_pagination.page, project_risk=filters.project_risk, file_page=file_pagination.next_page, file_risk=filters.file_risk, file_type=filters.file_type) }}" {% if not file_pagination.has_next %}aria-disabled="true" tabindex="-1"{% endif %}>下一页</a>
+        <a class="secondary-action compact-button {% if not file_pagination.has_next %}is-disabled{% endif %}" href="{{ url_for('attack.history', q=filters.q, project_page=project_pagination.page, project_risk=filters.project_risk, file_page=file_pagination.total_pages, file_risk=filters.file_risk, file_type=filters.file_type) }}" {% if not file_pagination.has_next %}aria-disabled="true" tabindex="-1"{% endif %}>末页</a>
+    </nav>
+</section>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -78,4 +159,5 @@
     boxes.forEach(function(box){ box.addEventListener("change", function(){ syncSelection(box); }); });
 })();
 </script>
+<script src="{{ url_for('static', filename='js/history-proximity.js') }}?v=20260731-near-field"></script>
 {% endblock %}

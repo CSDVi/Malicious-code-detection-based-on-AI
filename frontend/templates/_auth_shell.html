@@ -1,0 +1,63 @@
+<section class="auth-wrap" aria-label="账号入口">
+    <div class="auth-liquid-ether" data-liquid-ether aria-hidden="true"></div>
+    <div class="auth-stage {% if auth_mode == 'register' %}is-register{% endif %}" data-auth-shell data-auth-initial-mode="{{ auth_mode }}">
+        <section class="auth-form-panel auth-login-form" data-auth-form="login" aria-hidden="{{ 'false' if auth_mode == 'login' else 'true' }}" {% if auth_mode != 'login' %}inert{% endif %}>
+            <div class="auth-form-inner">
+                <h1>登录</h1>
+                <form method="post" action="{{ url_for('main.login') }}">
+                    <div class="auth-field">
+                        <label for="login-username">用户名</label>
+                        <input id="login-username" name="username" value="admin" autocomplete="username" required>
+                    </div>
+                    <div class="auth-field">
+                        <label for="login-password">密码</label>
+                        <input id="login-password" name="password" type="password" value="admin123" autocomplete="current-password" required>
+                    </div>
+                    <button class="auth-submit specular-button specular-button--filled" type="submit" data-specular-button>
+                        <span class="specular-button__fx" aria-hidden="true"></span>
+                        <span class="specular-button__label">登录</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section class="auth-form-panel auth-register-form" data-auth-form="register" aria-hidden="{{ 'false' if auth_mode == 'register' else 'true' }}" {% if auth_mode != 'register' %}inert{% endif %}>
+            <div class="auth-form-inner">
+                <h1>创建账户</h1>
+                <form method="post" action="{{ url_for('main.register') }}">
+                    <div class="auth-field">
+                        <label for="register-username">用户名</label>
+                        <input id="register-username" name="username" minlength="3" placeholder="至少 3 个字符" autocomplete="username" required>
+                    </div>
+                    <div class="auth-field">
+                        <label for="register-password">密码</label>
+                        <input id="register-password" name="password" type="password" minlength="6" placeholder="至少 6 个字符" autocomplete="new-password" required>
+                    </div>
+                    <button class="auth-submit specular-button specular-button--filled" type="submit" data-specular-button>
+                        <span class="specular-button__fx" aria-hidden="true"></span>
+                        <span class="specular-button__label">注册</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <aside class="auth-switch-panel" aria-live="polite">
+            <div class="auth-switch-copy auth-switch-copy-login" data-auth-copy="login" aria-hidden="{{ 'false' if auth_mode == 'login' else 'true' }}" {% if auth_mode != 'login' %}inert{% endif %}>
+                <h2>你好，新朋友</h2>
+                <p>注册账户后即可使用完整检测功能。</p>
+                <a class="auth-switch-action specular-button specular-button--outline" href="{{ url_for('main.register') }}" data-auth-switch="register" data-specular-button>
+                    <span class="specular-button__fx" aria-hidden="true"></span>
+                    <span class="specular-button__label">注册</span>
+                </a>
+            </div>
+            <div class="auth-switch-copy auth-switch-copy-register" data-auth-copy="register" aria-hidden="{{ 'false' if auth_mode == 'register' else 'true' }}" {% if auth_mode != 'register' %}inert{% endif %}>
+                <h2>欢迎回来</h2>
+                <p>已有账户，登录后继续使用。</p>
+                <a class="auth-switch-action specular-button specular-button--outline" href="{{ url_for('main.login') }}" data-auth-switch="login" data-specular-button>
+                    <span class="specular-button__fx" aria-hidden="true"></span>
+                    <span class="specular-button__label">登录</span>
+                </a>
+            </div>
+        </aside>
+    </div>
+</section>

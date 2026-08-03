@@ -82,7 +82,7 @@
         return "risk-low";
     }
 
-    document.querySelectorAll("[data-risk-level]").forEach((el) => {
+    document.querySelectorAll("[data-risk-level]:not([data-page-row])").forEach((el) => {
         el.classList.add(riskClass(el.dataset.riskLevel));
     });
 
@@ -142,6 +142,7 @@
         const activeJobCacheKey = "xiezhi_active_scan_jobs";
         const list = tray.querySelector("[data-job-list]");
         const jobsUrl = tray.dataset.jobsUrl;
+        const fileUrl = tray.dataset.fileUrl;
         const projectUrl = tray.dataset.projectUrl;
         const activeStatuses = new Set(["queued", "running", "cancelling"]);
         const terminalStatuses = new Set(["completed", "failed", "cancelled"]);
@@ -158,6 +159,74 @@
         const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({
             "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
         })[character]);
+        const specularJobButton = ({ label, variant = "neutral", attributes = "", disabled = false }) => `
+            <button type="button"
+                    class="compact-button job-specular-button job-specular-button--${variant}"
+                    data-job-specular
+                    ${attributes}${disabled ? " disabled aria-disabled=\"true\"" : ""}>
+                <span class="job-specular-button__label" data-job-specular-label>${escapeHtml(label)}</span>
+            </button>`;
+        const setSpecularJobButtonLabel = (button, label) => {
+            const labelNode = button.querySelector("[data-job-specular-label]");
+            if (labelNode) {
+                labelNode.textContent = label;
+            } else {
+                button.textContent = label;
+            }
+        };
+        let lastSpecularPointer = null;
+        let specularPointerFrame = 0;
+        const updateSpecularJobButtons = () => {
+            specularPointerFrame = 0;
+            if (!lastSpecularPointer || tray.hidden || !list) return;
+            list.querySelectorAll("[data-job-specular]").forEach((button) => {
+                const rect = button.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                const distanceX = Math.max(
+                    rect.left - lastSpecularPointer.x,
+                    0,
+                    lastSpecularPointer.x - rect.right
+                );
+                const distanceY = Math.max(
+                    rect.top - lastSpecularPointer.y,
+                    0,
+                    lastSpecularPointer.y - rect.bottom
+                );
+                const distance = Math.hypot(distanceX, distanceY);
+                const linear = Math.max(0, 1 - distance / 180);
+                const strength = linear * linear * (3 - 2 * linear);
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const angle = Math.atan2(
+                    lastSpecularPointer.y - centerY,
+                    lastSpecularPointer.x - centerX
+                ) * 180 / Math.PI + 90;
+                const localX = Math.max(0, Math.min(100,
+                    (lastSpecularPointer.x - rect.left) / rect.width * 100
+                ));
+                const localY = Math.max(0, Math.min(100,
+                    (lastSpecularPointer.y - rect.top) / rect.height * 100
+                ));
+                button.style.setProperty("--job-specular-angle", `${angle.toFixed(2)}deg`);
+                button.style.setProperty("--job-specular-strength", strength.toFixed(3));
+                button.style.setProperty("--job-specular-x", `${localX.toFixed(2)}%`);
+                button.style.setProperty("--job-specular-y", `${localY.toFixed(2)}%`);
+            });
+        };
+        if (!reduceMotion) {
+            document.addEventListener("pointermove", (event) => {
+                lastSpecularPointer = { x: event.clientX, y: event.clientY };
+                if (!specularPointerFrame) {
+                    specularPointerFrame = requestAnimationFrame(updateSpecularJobButtons);
+                }
+            }, { passive: true });
+            window.addEventListener("blur", () => {
+                if (!list) return;
+                list.querySelectorAll("[data-job-specular]").forEach((button) => {
+                    button.style.setProperty("--job-specular-strength", "0");
+                });
+            });
+        }
         const renderJobs = (jobs) => {
             latestJobs = jobs;
             jobs
@@ -190,22 +259,37 @@
                 const total = Number(job.total_files || 0);
                 const done = Number(job.processed_files || 0);
                 const percent = total > 0 ? Math.min(100, Math.round(done * 100 / total)) : 0;
-                const progress = total === 100
+                const isFileJob = job.target_type === "file";
+                const progress = isFileJob && total > 0
                     ? `${percent}%`
                     : total > 0 ? `${done}/${total}` : "准备中";
+                const resultUrl = isFileJob ? fileUrl : projectUrl;
                 const action = job.pending_upload
                     ? `<button type="button" class="secondary-action compact-button" disabled>正在提交</button>`
                     : job.status === "queued" || job.status === "running"
-                    ? `<button type="button" class="danger-action compact-button" data-cancel-job="${jobId}">停止</button>`
+                    ? specularJobButton({
+                        label: "停止",
+                        variant: "danger",
+                        attributes: `data-cancel-job="${escapeHtml(jobId)}"`
+                    })
                     : job.status === "cancelling"
-                        ? `<button type="button" class="danger-action compact-button" disabled>正在停止</button>`
+                        ? specularJobButton({
+                            label: "正在停止",
+                            variant: "danger",
+                            disabled: true
+                        })
                     : job.status === "completed"
-                        ? `<a class="secondary-action compact-button" href="${projectUrl}?job_id=${encodeURIComponent(jobId)}">查看结果</a>`
+                        ? `<a class="secondary-action compact-button" href="${resultUrl}?job_id=${encodeURIComponent(jobId)}">查看结果</a>`
                         : "";
-                const dismiss = `<button class="secondary-action compact-button job-row-dismiss" type="button" data-dismiss-job="${jobId}">关闭</button>`;
+                const dismiss = `<button class="job-row-dismiss" type="button"
+                    data-dismiss-job="${escapeHtml(jobId)}"
+                    aria-label="关闭此任务提示" title="关闭"><span aria-hidden="true">×</span></button>`;
                 return `<div class="scan-job-row" data-global-job="${jobId}">
                     <div class="scan-job-main"><strong>${escapeHtml(job.target_name || jobId.slice(0, 12))}</strong><span>${escapeHtml(job.stage || statusText[job.status] || job.status)} · ${escapeHtml(modeText[job.mode] || job.mode || "未记录模式")}</span></div>
-                    <div class="scan-job-progress" aria-label="${progress}"><span style="width:${percent}%"></span></div>
+                    <div class="scan-job-progress" role="progressbar" aria-label="检测进度 ${progress}"
+                         aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}">
+                        <span style="width:${percent}%"></span>
+                    </div>
                     <span class="scan-job-count">${progress}</span>
                     <div class="scan-job-actions">${action}${dismiss}</div>
                 </div>`;
@@ -220,9 +304,12 @@
             }
         } catch (_error) {}
 
-        document.querySelectorAll("[data-project-scan-form]").forEach((form) => {
+        document.querySelectorAll("[data-project-scan-form], [data-file-scan-form]").forEach((form) => {
             form.addEventListener("submit", () => {
-                const upload = form.querySelector("input[name='project_zip']");
+                const isFileScan = form.hasAttribute("data-file-scan-form");
+                const upload = form.querySelector(
+                    isFileScan ? "input[name='code_file']" : "input[name='project_zip']"
+                );
                 if (!upload || !upload.files || !upload.files[0]) return;
                 const modeInput = form.querySelector(
                     "input[name='mode']:checked, select[name='mode']"
@@ -230,11 +317,12 @@
                 const pendingJob = {
                     id: `upload-${Date.now()}`,
                     target_name: upload.files[0].name,
+                    target_type: isFileScan ? "file" : "project",
                     mode: modeInput ? modeInput.value : "auto",
                     status: "queued",
-                    stage: "正在上传项目并创建检测任务",
-                    processed_files: 0,
-                    total_files: 0,
+                    stage: isFileScan ? "正在上传文件并创建检测任务" : "正在上传项目并创建检测任务",
+                    processed_files: isFileScan ? 5 : 0,
+                    total_files: isFileScan ? 100 : 0,
                     pending_upload: true
                 };
                 renderJobs([
@@ -265,7 +353,8 @@
             const jobId = String(button.dataset.cancelJob);
             document.querySelectorAll(`[data-cancel-job="${CSS.escape(jobId)}"]`).forEach((candidate) => {
                 candidate.disabled = true;
-                candidate.textContent = "正在停止";
+                candidate.setAttribute("aria-disabled", "true");
+                setSpecularJobButtonLabel(candidate, "正在停止");
             });
             fetch(`${jobsUrl}/${encodeURIComponent(jobId)}/cancel`, {
                 method: "POST", headers: {"Accept": "application/json"}
@@ -275,12 +364,82 @@
             }).catch(() => {
                 document.querySelectorAll(`[data-cancel-job="${CSS.escape(jobId)}"]`).forEach((candidate) => {
                     candidate.disabled = false;
-                    candidate.textContent = "停止";
+                    candidate.removeAttribute("aria-disabled");
+                    setSpecularJobButtonLabel(candidate, "停止");
                 });
             });
         });
         pollJobs();
     }
+
+    function setupInteractiveRiskDonuts() {
+        document.querySelectorAll("[data-risk-donut]").forEach((donut) => {
+            const svg = donut.querySelector("svg");
+            const segments = Array.from(donut.querySelectorAll("[data-donut-segment]"));
+            const proxies = Array.from(donut.querySelectorAll("[data-risk-donut-proxy]"));
+            if (!svg || !segments.length) return;
+
+            let selectedKey = "";
+            const setActive = (key) => {
+                [...segments, ...proxies].forEach((item) => {
+                    item.classList.toggle("is-active", Boolean(key) && item.dataset.riskFilter === key);
+                });
+            };
+            const setSelected = (key) => {
+                selectedKey = key;
+                [...segments, ...proxies].forEach((item) => {
+                    item.classList.toggle("is-selected", Boolean(key) && item.dataset.riskFilter === key);
+                });
+            };
+            const segmentForPercent = (percent) => segments.find((segment) => {
+                const start = Number(segment.dataset.startPercent || 0);
+                const end = Number(segment.dataset.endPercent || 0);
+                return percent >= start && percent <= end;
+            }) || segments[segments.length - 1];
+            const activate = (key) => {
+                if (!key) return;
+                setSelected(key);
+                setActive(key);
+                document.dispatchEvent(new CustomEvent("xiezhi:project-risk-filter", {
+                    detail: { riskLevel: key }
+                }));
+            };
+
+            donut.addEventListener("pointermove", (event) => {
+                const rect = svg.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const dx = event.clientX - centerX;
+                const dy = event.clientY - centerY;
+                const distance = Math.hypot(dx, dy);
+                const radius = Math.min(rect.width, rect.height) / 2;
+                if (distance > radius * 1.08 || distance < radius * 0.32) {
+                    setActive(selectedKey);
+                    return;
+                }
+                const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360;
+                const segment = segmentForPercent(angle / 3.6);
+                setActive(segment ? segment.dataset.riskFilter : selectedKey);
+            }, { passive: true });
+            donut.addEventListener("pointerleave", () => setActive(selectedKey));
+
+            [...segments, ...proxies].forEach((item) => {
+                const key = item.dataset.riskFilter;
+                item.addEventListener("pointerenter", () => setActive(key));
+                item.addEventListener("focus", () => setActive(key));
+                item.addEventListener("blur", () => setActive(selectedKey));
+                item.addEventListener("click", () => activate(key));
+                item.addEventListener("keydown", (event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    activate(key);
+                });
+            });
+        });
+    }
+
+    setupInteractiveRiskDonuts();
 
     document.querySelectorAll("[data-paginated-table]").forEach((container) => {
         const rows = Array.from(container.querySelectorAll("[data-page-row]"));
@@ -298,8 +457,28 @@
             ? Array.from(pagination.querySelectorAll("[data-extension-option]"))
             : [];
         const extensionSummary = pagination && pagination.querySelector("[data-extension-summary]");
+        const filterKinds = pagination
+            ? Array.from(pagination.querySelectorAll("[data-filter-kind]"))
+            : [];
+        const filterOptions = pagination
+            ? Array.from(pagination.querySelectorAll("[data-filter-option]"))
+            : [];
+        const filterAllControls = pagination
+            ? Array.from(pagination.querySelectorAll("[data-filter-all]"))
+            : [];
+        const filterBranches = pagination
+            ? Array.from(pagination.querySelectorAll("[data-filter-branch]"))
+            : [];
+        const filterSummary = pagination && pagination.querySelector("[data-filter-summary]");
         const emptyRow = container.querySelector("[data-filter-empty]");
         const pageSize = Math.max(1, Number(container.dataset.pageSize || 10));
+        const hasTreeFilter = filterKinds.length > 0 && filterOptions.length > 0;
+        let activeFilterKind = (
+            filterKinds.find((option) => option.checked)
+            || filterKinds[0]
+            || {}
+        ).value || "";
+        let panelHighlightTimer = 0;
         let pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
         let currentPage = 1;
 
@@ -311,6 +490,11 @@
             const selectedExtensions = new Set(
                 extensionOptions.filter((option) => option.checked).map((option) => option.value)
             );
+            const selectedTreeValues = new Set(
+                optionsForKind(activeFilterKind)
+                    .filter((option) => option.checked)
+                    .map((option) => option.value)
+            );
             return rows.filter((row) => {
                 const matchesQuery = !query || (
                     serialQuery
@@ -319,8 +503,47 @@
                 );
                 const matchesExtension = !extensionOptions.length
                     || selectedExtensions.has(String(row.dataset.fileExtension || "__none__"));
-                return matchesQuery && matchesExtension;
+                const matchesTreeFilter = !hasTreeFilter
+                    || selectedTreeValues.has(treeFilterValue(row, activeFilterKind));
+                return matchesQuery && matchesExtension && matchesTreeFilter;
             });
+        };
+
+        const optionsForKind = (kind) => filterOptions.filter((option) => {
+            return option.dataset.filterGroup === kind;
+        });
+        const filterLabel = (kind) => kind === "risk" ? "危险等级" : "语言";
+        const treeFilterValue = (row, kind) => {
+            if (kind === "risk") return String(row.dataset.riskLevel || "unknown");
+            return String(row.dataset.fileLanguage || "unknown");
+        };
+        const updateTreeFilterSummary = () => {
+            if (!hasTreeFilter) return;
+            activeFilterKind = (
+                filterKinds.find((option) => option.checked)
+                || filterKinds[0]
+                || {}
+            ).value || activeFilterKind;
+            filterBranches.forEach((branch) => {
+                branch.hidden = branch.dataset.filterBranch !== activeFilterKind;
+            });
+            filterAllControls.forEach((control) => {
+                const groupOptions = optionsForKind(control.dataset.filterAll);
+                const selectedCount = groupOptions.filter((option) => option.checked).length;
+                control.checked = groupOptions.length > 0 && selectedCount === groupOptions.length;
+                control.indeterminate = selectedCount > 0 && selectedCount < groupOptions.length;
+            });
+            if (!filterSummary) return;
+            const activeOptions = optionsForKind(activeFilterKind);
+            const selectedOptions = activeOptions.filter((option) => option.checked);
+            const label = filterLabel(activeFilterKind);
+            filterSummary.textContent = selectedOptions.length === activeOptions.length
+                ? `${label}：全部`
+                : selectedOptions.length === 0
+                    ? `${label}：未选择`
+                    : selectedOptions.length === 1
+                        ? `${label}：${selectedOptions[0].dataset.filterLabel || selectedOptions[0].value}`
+                        : `${label}：${selectedOptions.length} 项`;
         };
 
         const updateExtensionSummary = () => {
@@ -363,6 +586,7 @@
             next.disabled = visibleRows.length === 0 || currentPage === pageCount;
             if (lastPage) lastPage.disabled = visibleRows.length === 0 || currentPage === pageCount;
             updateExtensionSummary();
+            updateTreeFilterSummary();
         };
 
         if (firstPage) firstPage.addEventListener("click", () => {
@@ -417,6 +641,51 @@
             option.addEventListener("change", () => {
                 currentPage = 1;
                 renderPage();
+            });
+        });
+        filterKinds.forEach((option) => {
+            option.addEventListener("change", () => {
+                activeFilterKind = option.value;
+                currentPage = 1;
+                renderPage();
+            });
+        });
+        filterAllControls.forEach((control) => {
+            control.addEventListener("change", () => {
+                optionsForKind(control.dataset.filterAll).forEach((option) => {
+                    option.checked = control.checked;
+                });
+                currentPage = 1;
+                renderPage();
+            });
+        });
+        filterOptions.forEach((option) => {
+            option.addEventListener("change", () => {
+                currentPage = 1;
+                renderPage();
+            });
+        });
+        document.addEventListener("xiezhi:project-risk-filter", (event) => {
+            const riskLevel = String((event.detail || {}).riskLevel || "");
+            const riskKind = filterKinds.find((option) => option.value === "risk");
+            const riskOptions = optionsForKind("risk");
+            const target = riskOptions.find((option) => option.value === riskLevel);
+            if (!riskKind || !target) return;
+            riskKind.checked = true;
+            activeFilterKind = "risk";
+            riskOptions.forEach((option) => {
+                option.checked = option === target;
+            });
+            currentPage = 1;
+            renderPage();
+            container.classList.add("is-filter-target");
+            window.clearTimeout(panelHighlightTimer);
+            panelHighlightTimer = window.setTimeout(() => {
+                container.classList.remove("is-filter-target");
+            }, 1400);
+            container.scrollIntoView({
+                behavior: reduceMotion ? "auto" : "smooth",
+                block: "start"
             });
         });
         renderPage();

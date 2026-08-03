@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import posixpath
 import re
 from collections import Counter
 from typing import Iterable
@@ -13,6 +14,8 @@ from attack_detection.dataset import CodeSample
 
 
 LEXICAL_BUCKETS = 64
+PROJECT_RELATIONSHIP_NODE_LIMIT = 22
+PROJECT_RELATIONSHIP_EDGE_LIMIT = 48
 
 
 def build_lightweight_graph(content: str, language: str) -> dict[str, object]:
@@ -126,12 +129,261 @@ def build_project_graph(samples: Iterable[CodeSample]) -> dict[str, object]:
     }
 
 
+def build_project_relationship_graph(
+    samples: Iterable[CodeSample],
+    risk_by_path: dict[str, dict[str, object]] | None = None,
+    *,
+    node_limit: int = PROJECT_RELATIONSHIP_NODE_LIMIT,
+    edge_limit: int = PROJECT_RELATIONSHIP_EDGE_LIMIT,
+) -> dict[str, object]:
+    """Build a bounded, report-only graph of resolved local file references.
+
+    This graph is deliberately separate from the GATv2 feature graph.  It only
+    draws an edge when an import/include/source reference resolves to one
+    concrete file in the uploaded project, so the report never invents calls.
+    """
+
+    records = list(samples)[:200]
+    normalized_records = [
+        (_normalize_project_path(sample.file_path or sample.sample_hash), sample)
+        for sample in records
+    ]
+    normalized_records = [item for item in normalized_records if item[0]]
+    project_paths = [path for path, _sample in normalized_records]
+    path_lookup = {path.casefold(): path for path in project_paths}
+    risk_lookup = {
+        _normalize_project_path(path).casefold(): dict(value)
+        for path, value in (risk_by_path or {}).items()
+        if _normalize_project_path(path) and isinstance(value, dict)
+    }
+
+    relationships: set[tuple[str, str, str]] = set()
+    for source_path, sample in normalized_records:
+        for relation, reference in _local_file_references(
+            sample.code,
+            sample.language,
+        ):
+            target_path = _resolve_project_reference(
+                source_path,
+                reference,
+                sample.language,
+                project_paths,
+                path_lookup,
+            )
+            if target_path and target_path != source_path:
+                relationships.add((source_path, target_path, relation))
+
+    degree = Counter()
+    for source, target, _relation in relationships:
+        degree.update((source, target))
+
+    def risk_score(path: str) -> int:
+        value = risk_lookup.get(path.casefold(), {}).get("risk_score")
+        try:
+            return max(0, min(100, int(float(value or 0))))
+        except (TypeError, ValueError):
+            return 0
+
+    prioritized_edges = sorted(
+        relationships,
+        key=lambda item: (
+            -max(risk_score(item[0]), risk_score(item[1])),
+            -(degree[item[0]] + degree[item[1]]),
+            item[0].casefold(),
+            item[1].casefold(),
+            item[2],
+        ),
+    )
+    selected_paths: set[str] = set()
+    selected_edges: list[tuple[str, str, str]] = []
+    for source, target, relation in prioritized_edges:
+        new_paths = {source, target} - selected_paths
+        if len(selected_paths) + len(new_paths) > max(2, int(node_limit)):
+            continue
+        selected_paths.update((source, target))
+        selected_edges.append((source, target, relation))
+        if len(selected_edges) >= max(1, int(edge_limit)):
+            break
+
+    for path in sorted(
+        project_paths,
+        key=lambda item: (-risk_score(item), -degree[item], item.casefold()),
+    ):
+        if len(selected_paths) >= max(1, int(node_limit)):
+            break
+        selected_paths.add(path)
+
+    selected = sorted(
+        selected_paths,
+        key=lambda item: (-degree[item], -risk_score(item), item.casefold()),
+    )
+    node_ids = {path: f"file-{index + 1}" for index, path in enumerate(selected)}
+    nodes = []
+    for path in selected:
+        risk = risk_lookup.get(path.casefold(), {})
+        nodes.append({
+            "id": node_ids[path],
+            "path": path,
+            "name": posixpath.basename(path) or path,
+            "language": str(risk.get("language") or "unknown"),
+            "risk_score": risk_score(path),
+            "risk_level": str(risk.get("risk_level") or "unknown"),
+            "degree": degree[path],
+        })
+    edges = [
+        {
+            "source": node_ids[source],
+            "target": node_ids[target],
+            "relation": relation,
+        }
+        for source, target, relation in selected_edges
+        if source in node_ids and target in node_ids
+    ]
+    return {
+        "node_count": len(project_paths),
+        "edge_count": len(relationships),
+        "displayed_node_count": len(nodes),
+        "displayed_edge_count": len(edges),
+        "truncated": len(nodes) < len(project_paths) or len(edges) < len(relationships),
+        "nodes": nodes,
+        "edges": edges,
+    }
+
+
 def _node(nodes: list[dict[str, object]], known: set[str], value: dict[str, object]) -> None:
     identifier = str(value["id"])
     if identifier in known:
         return
     known.add(identifier)
     nodes.append(value)
+
+
+def _normalize_project_path(value: str) -> str:
+    normalized = posixpath.normpath(str(value or "").replace("\\", "/"))
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return "" if normalized in {"", ".", ".."} else normalized.lstrip("/")
+
+
+def _local_file_references(content: str, language: str) -> list[tuple[str, str]]:
+    language = str(language or "").lower()
+    patterns: list[tuple[str, str]] = []
+    if language == "python":
+        patterns.extend((
+            ("import", r"^\s*from\s+([A-Za-z0-9_.]+)\s+import\b"),
+            ("import", r"^\s*import\s+([A-Za-z0-9_.]+)"),
+        ))
+    if language in {"javascript", "typescript"}:
+        patterns.extend((
+            ("import", r"(?:import|export)[^;\n]*?\bfrom\s*['\"]([^'\"]+)['\"]"),
+            ("import", r"^\s*import\s*['\"]([^'\"]+)['\"]"),
+            ("require", r"\brequire\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"),
+            ("import", r"\bimport\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"),
+        ))
+    if language in {"c", "cpp"}:
+        patterns.append(("include", r"^\s*#\s*include\s*\"([^\"]+)\""))
+    if language in {"php", "ruby"}:
+        patterns.extend((
+            ("include", r"\b(?:include|include_once|require|require_once)\s*\(?\s*['\"]([^'\"]+)['\"]"),
+            ("require", r"\brequire_relative\s*\(?\s*['\"]([^'\"]+)['\"]"),
+        ))
+    if language in {"java", "kotlin", "scala"}:
+        patterns.append(("import", r"^\s*import\s+([A-Za-z0-9_.]+)\s*;?"))
+    if language in {"bash", "powershell"}:
+        patterns.extend((
+            ("source", r"^\s*(?:source|\.)\s+['\"]?([^'\"\s;]+)"),
+            ("import", r"^\s*Import-Module\s+['\"]?([^'\"\s;]+)"),
+        ))
+    if language == "html":
+        patterns.append(("load", r"<script\b[^>]*\bsrc\s*=\s*['\"]([^'\"]+)['\"]"))
+
+    references = []
+    for relation, pattern in patterns:
+        for value in re.findall(pattern, content, re.IGNORECASE | re.MULTILINE):
+            reference = str(value or "").strip()
+            if reference:
+                references.append((relation, reference))
+    return list(dict.fromkeys(references))
+
+
+def _resolve_project_reference(
+    source_path: str,
+    reference: str,
+    language: str,
+    project_paths: list[str],
+    path_lookup: dict[str, str],
+) -> str | None:
+    raw = str(reference or "").strip().replace("\\", "/")
+    raw = raw.split("?", 1)[0].split("#", 1)[0]
+    if (
+        not raw
+        or raw.startswith(("http://", "https://", "//"))
+        or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", raw)
+    ):
+        return None
+
+    source_dir = posixpath.dirname(source_path)
+    candidates: list[str] = []
+    if language == "python" and raw.startswith("."):
+        leading = len(raw) - len(raw.lstrip("."))
+        base = source_dir
+        for _index in range(max(0, leading - 1)):
+            base = posixpath.dirname(base)
+        module = raw[leading:].replace(".", "/")
+        candidates.append(posixpath.join(base, module))
+    else:
+        candidates.extend((
+            posixpath.join(source_dir, raw),
+            raw.lstrip("/"),
+        ))
+        if "." in raw and "/" not in raw:
+            module = raw.replace(".", "/")
+            candidates.extend((module, posixpath.join(source_dir, module)))
+
+    extensions = (
+        ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".kt", ".scala",
+        ".c", ".h", ".cc", ".cpp", ".hpp", ".php", ".rb", ".sh",
+        ".bash", ".ps1", ".psm1", ".html", ".htm",
+    )
+    expanded: list[str] = []
+    for candidate in candidates:
+        normalized = _normalize_project_path(candidate)
+        if not normalized:
+            continue
+        expanded.append(normalized)
+        if not posixpath.splitext(normalized)[1]:
+            expanded.extend(normalized + extension for extension in extensions)
+            expanded.extend(
+                posixpath.join(normalized, "index" + extension)
+                for extension in (".js", ".jsx", ".ts", ".tsx", ".py")
+            )
+
+    for candidate in dict.fromkeys(expanded):
+        exact = path_lookup.get(candidate.casefold())
+        if exact:
+            return exact
+
+    suffix_matches = {
+        path
+        for candidate in expanded
+        for path in project_paths
+        if path.casefold().endswith("/" + candidate.casefold())
+    }
+    if len(suffix_matches) == 1:
+        return next(iter(suffix_matches))
+
+    reference_name = posixpath.basename(raw)
+    reference_stem = posixpath.splitext(reference_name)[0].casefold()
+    if reference_stem:
+        stem_matches = {
+            path
+            for path in project_paths
+            if posixpath.splitext(posixpath.basename(path))[0].casefold()
+            == reference_stem
+        }
+        if len(stem_matches) == 1:
+            return next(iter(stem_matches))
+    return None
 
 
 def _functions(code: str) -> list[str]:

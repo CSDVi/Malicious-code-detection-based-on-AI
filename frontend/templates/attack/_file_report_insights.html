@@ -1,0 +1,55 @@
+{% from "attack/_report_chart_macros.html" import file_model_radar %}
+{% set evidence_chart = file_report_insights.evidence_chart %}
+{% set radar = file_report_insights.model_radar %}
+{% if radar %}
+<section class="panel motion-card section-block report-chart-card report-chart-card-radar file-model-radar-card">
+    <div class="section-title compact-title report-chart-heading"><div><small>能力边界</small><h2>执行模型五维性能</h2></div><span class="report-chart-unit">0–1</span></div>
+    {{ file_model_radar(radar) }}
+</section>
+{% endif %}
+
+{% if evidence_chart.total %}
+<section class="report-chart-grid file-report-charts section-block">
+    <article class="panel motion-card report-chart-card report-chart-card-wide">
+        <div class="section-title compact-title report-chart-heading"><div><small>证据构成</small><h2>风险类别占比</h2></div><span class="report-chart-unit">n</span></div>
+        <figure class="report-science-figure">
+            <figcaption>按可定位证据条数统计；同类证据不会按风险分重复加权</figcaption>
+            <div class="donut-chart-layout">
+                <div class="donut-chart" style="--report-donut: {{ evidence_chart.gradient }}" role="img" aria-label="共 {{ evidence_chart.total }} 条可定位证据"><div><strong>{{ evidence_chart.total }}</strong><span>条证据</span></div></div>
+                <ul class="chart-legend">{% for item in evidence_chart.entries %}<li><i style="--legend-color: {{ item.color }}"></i><span title="{{ item.label|zh }}">{{ item.label|zh }}</span><strong>{{ item.value }} · {{ item.percent }}%</strong></li>{% endfor %}</ul>
+            </div>
+        </figure>
+    </article>
+</section>
+{% endif %}
+
+<section class="panel motion-card section-block report-insight-panel">
+    <div class="section-title compact-title report-insight-title">
+        <div><h2>AI模型判定明细</h2></div>
+    </div>
+    <div class="decision-ledger">
+        {% for item in file_report_insights.decision_ledger %}
+        <article class="decision-ledger-row">
+            <div class="decision-ledger-engine">
+                <strong>{{ item.name|zh }}</strong>
+                <small class="authority-chip">{{ item.authority_label }}</small>
+            </div>
+            {% if item.probability_percent is not none and item.threshold_percent is not none %}
+            <div class="threshold-visual" aria-label="概率 {{ item.probability_percent }}%，阈值 {{ item.threshold_percent }}%">
+                <div class="threshold-track">
+                    <span class="threshold-fill" style="width: {{ item.probability_width }}%"></span>
+                    <i class="threshold-mark" style="left: {{ item.threshold_position }}%" title="阈值 {{ item.threshold_percent }}%"></i>
+                </div>
+                <div class="threshold-labels"><span>概率 {{ item.probability_percent }}%</span><span>阈值 {{ item.threshold_percent }}%</span></div>
+            </div>
+            <div class="decision-ledger-outcome">
+                <strong>{{ item.decision|zh }}</strong>
+                <span class="threshold-margin threshold-margin-{{ item.margin_direction }}">{% if item.margin >= 0 %}高于{% else %}低于{% endif %}阈值 {{ item.margin|abs }} 个百分点</span>
+            </div>
+            {% endif %}
+        </article>
+        {% else %}
+        <div class="empty-state">本次没有保存可用于判定账本的完整引擎输出。</div>
+        {% endfor %}
+    </div>
+</section>

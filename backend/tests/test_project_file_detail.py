@@ -64,16 +64,26 @@ def test_remediation_is_short_and_specific_to_language_and_category():
         {"category": "Command Execution"},
         "python",
     )["suggestions"]
-    sql = remediation_for_finding(
+    sql_remediation = remediation_for_finding(
         {"category": "SQL Injection"},
         "python",
-    )["suggestions"]
+    )
+    sql = sql_remediation["suggestions"]
 
     assert 1 <= len(command) <= 2
     assert 1 <= len(sql) <= 2
     assert command != sql
     assert "subprocess" in command[0]
     assert "DB-API" in sql[0]
+    assert sql_remediation["cwe"] == "CWE-89"
+    assert sql_remediation["cve_examples"] == [{
+        "id": "CVE-2023-34362",
+        "title": "MOVEit Transfer SQL 注入案例",
+        "summary": "未授权攻击者可利用 SQL 注入访问或修改 MOVEit Transfer 数据库内容。",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-34362",
+        "relationship": "same_weakness_example",
+        "disclaimer": "同类公开案例，不代表当前文件就是该 CVE。",
+    }]
 
 
 def test_project_file_detail_only_allows_standard_or_deep_results():
@@ -107,6 +117,8 @@ def test_project_evidence_is_sorted_by_score_then_line():
 
 def test_project_result_view_numbers_files_and_builds_project_only_extensions():
     view = _project_result_view({
+        "average_score": 32,
+        "max_score": 80,
         "high_risk_files": [
             {"filename": "demo/src/app.js", "effective_mode": "deep"},
             {"filename": "demo/run.py", "effective_mode": "quick"},
@@ -136,8 +148,26 @@ def test_project_result_view_numbers_files_and_builds_project_only_extensions():
     }]
     assert view["other_warnings"] == []
     assert view["warning_count"] == 1
+    assert view["warning_breakdown"] == {
+        "skipped_file_count": 1,
+        "other_limit_count": 0,
+    }
+    assert view["skipped_reason_counts"] == [{
+        "reason": "超过单文件大小限制",
+        "count": 1,
+    }]
+    assert view["risk_score"] == 64.0
     assert view["quick_only_file_count"] == 1
     assert {
         item["label"]: item["count"]
         for item in view["file_extensions"]
     } == {".js": 1, ".json": 1, ".py": 1}
+    assert {
+        item["label"]: item["count"]
+        for item in view["file_language_filters"]
+    } == {"javascript": 1, "python": 1, "未检测": 1}
+    assert view["file_risk_filters"] == [{
+        "value": "unknown",
+        "label": "需复核",
+        "count": 3,
+    }]

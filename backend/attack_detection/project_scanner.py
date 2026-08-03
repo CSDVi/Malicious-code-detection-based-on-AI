@@ -21,7 +21,12 @@ from .data_pipeline import make_sample
 from .engines.codet5p_engine import CodeT5PEngine
 from .engines.gat_engine import GATEngine
 from .engines.rule_engine import RuleEngine
-from .features.graph_builder import build_project_graph
+from .explainability import AI_ONLY_CATEGORY
+from .features.graph_builder import (
+    build_project_graph,
+    build_project_relationship_graph,
+)
+from .fusion import fuse_engine_results
 from .languages import display_language
 from .scanner import (
     detect_language,
@@ -589,6 +594,7 @@ def scan_zip_project(
     deep_indices: list[int] = []
     semantic_indices: list[int] = []
     project_engines: list[dict[str, object]] = []
+    project_relationship_graph: dict[str, object] | None = None
     try:
         try:
             archive_path = stage_project_archive(source) if staged_here else Path(source)
@@ -1015,6 +1021,11 @@ def scan_zip_project(
                         # avoids making graph extraction and line explanation
                         # fight for the same interpreter lock.
                         graph = build_project_graph(graph_samples)
+                        project_relationship_graph = _build_project_relationship_view(
+                            graph_samples,
+                            results,
+                            warnings,
+                        )
                     explanation_future = (
                         deep_executor.submit(explanation_branch)
                         if generate_line_attributions
@@ -1101,6 +1112,11 @@ def scan_zip_project(
         ):
             _progress(progress_callback, 0, 1, "构建项目图并执行 GATv2")
             graph = build_project_graph(graph_samples)
+            project_relationship_graph = _build_project_relationship_view(
+                graph_samples,
+                results,
+                warnings,
+            )
             project_engines.append(
                 GATEngine().scan_project(graph, cancel_event=cancel_event)
             )
@@ -1109,7 +1125,13 @@ def scan_zip_project(
         shutil.rmtree(temporary_root, ignore_errors=True)
         if staged_here and archive_path is not None:
             archive_path.unlink(missing_ok=True)
-        summary = summarize_project(original_filename, results, warnings, project_engines)
+        summary = summarize_project(
+            original_filename,
+            results,
+            warnings,
+            project_engines,
+            project_relationship_graph,
+        )
     summary["scan_strategy"] = "all_files_quick_then_batched_candidate_deep"
     summary["deep_scanned_file_count"] = len(deep_indices)
     summary["semantic_scanned_file_count"] = len(
@@ -1188,13 +1210,21 @@ def summarize_project(
     results: list[dict[str, object]],
     warnings: list[str] | None = None,
     project_engines: list[dict[str, object]] | None = None,
+    project_relationship_graph: dict[str, object] | None = None,
 ) -> dict[str, object]:
     category_counts: Counter[str] = Counter()
     level_counts: Counter[str] = Counter()
     language_counts: Counter[str] = Counter()
     decision_counts: Counter[str] = Counter()
     for result in results:
-        category_counts.update(result.get("categories", []))
+        categories = [
+            str(category)
+            for category in result.get("categories", []) or []
+            if str(category).strip()
+        ]
+        if not categories and str(result.get("final_decision") or "") == "malicious":
+            categories = [AI_ONLY_CATEGORY]
+        category_counts.update(categories)
         level_counts.update([str(result.get("risk_level", "unknown"))])
         language_counts.update([
             str(
@@ -1206,37 +1236,6 @@ def summarize_project(
             )
         ])
         decision_counts.update([str(result.get("final_decision", "unknown"))])
-    ai_eligible_results = [
-        result for result in results
-        if str(result.get("language") or "unknown") != "binary"
-    ]
-    ai_participated_count = sum(
-        bool(result.get("ai_participated"))
-        for result in ai_eligible_results
-    )
-    ai_primary_decision_count = sum(
-        str(result.get("decision_authority") or "")
-        in {"ai", "ai_with_rule_vulnerability"}
-        for result in ai_eligible_results
-    )
-    rule_fallback_count = sum(
-        result.get("decision_authority") == "rule_fallback"
-        for result in ai_eligible_results
-    )
-    ai_unresolved_count = sum(
-        result.get("decision_authority") == "unresolved"
-        for result in ai_eligible_results
-    )
-    ai_eligible_count = len(ai_eligible_results)
-    ai_participation_rate = round(
-        ai_participated_count * 100 / ai_eligible_count,
-        1,
-    ) if ai_eligible_count else 0.0
-    ai_primary_decision_rate = round(
-        ai_primary_decision_count * 100 / ai_eligible_count,
-        1,
-    ) if ai_eligible_count else 0.0
-    ai_participation_target = 90.0
     high_risk = sorted(
         results,
         key=lambda item: int(item.get("risk_score", 0)),
@@ -1245,27 +1244,34 @@ def summarize_project(
     avg = round(sum(int(item.get("risk_score", 0)) for item in results) / len(results), 1) if results else 0
     max_score = int(high_risk[0].get("risk_score", 0)) if high_risk else 0
     project_engines = list(project_engines or [])
+    project_fusion = fuse_engine_results([
+        engine for engine in project_engines
+        if isinstance(engine, dict)
+    ])
     project_xgb = [
         engine for engine in project_engines
         if str(engine.get("name", "")).startswith("xgboost_project_")
         and engine.get("status") == "completed"
     ]
-    gat = next((engine for engine in project_engines if engine.get("name") == "gatv2"), {})
-    gat_score = int(float(gat.get("probability") or 0.0) * 100) if gat.get("status") == "completed" else 0
-    xgb_positive_scores = [
-        int(float(engine.get("probability") or 0.0) * 100)
-        for engine in project_xgb
-        if engine.get("decision") == "malicious"
-    ]
-    max_score = max(max_score, gat_score if gat.get("decision") == "malicious" else 0, *xgb_positive_scores)
-    project_malicious = any(engine.get("decision") == "malicious" for engine in project_xgb)
+    has_project_ai_result = bool(project_fusion.get("ai_participated"))
+    max_score = max(max_score, int(project_fusion.get("risk_score") or 0))
     final_decision = "malicious" if (
-        gat.get("decision") == "malicious" or project_malicious or decision_counts["malicious"]
+        project_fusion.get("final_decision") == "malicious"
+        or decision_counts["malicious"]
     ) else (
-        "vulnerable" if decision_counts["vulnerable"] else (
-            "unknown" if decision_counts["unknown"] else "benign"
+        "unknown"
+        if (
+            decision_counts["unknown"]
+            or decision_counts["vulnerable"]
+            or (
+                has_project_ai_result
+                and project_fusion.get("final_decision") == "unknown"
+            )
         )
+        else "benign"
     )
+    if project_fusion.get("final_decision") == "malicious":
+        category_counts.update([AI_ONLY_CATEGORY])
     project_decision_counts = Counter(str(engine.get("decision") or "unknown") for engine in project_xgb)
     ai_models_executed = sorted({
         str(name)
@@ -1284,47 +1290,30 @@ def summarize_project(
             }
         )
     })
-    summary_warnings = list(warnings or [])
-    if (
-        ai_eligible_count
-        and ai_participation_rate < ai_participation_target
-    ):
-        summary_warnings.append(
-            f"AI参与率为 {ai_participation_rate:.1f}%，低于 90% 目标；"
-            "未完成AI推理的文件已显式标记为规则回退或未决，未静默冒充AI结论。"
-        )
     return {
         "project_name": project_name,
         "file_count": len(results),
         "average_score": avg,
         "max_score": max_score,
-        "risk_level": _project_level(avg, max_score),
+        "risk_level": (
+            "unknown"
+            if final_decision == "unknown"
+            else _project_level(avg, max_score)
+        ),
         "final_decision": final_decision,
         "category_counts": dict(category_counts),
         "level_counts": dict(level_counts),
         "language_counts": dict(language_counts),
         "decision_counts": dict(decision_counts),
         "project_decision_counts": dict(project_decision_counts),
-        "decision_policy": "ai_primary_rule_explanation_and_conditional_fallback",
-        "ai_participation_target": ai_participation_target,
-        "ai_eligible_file_count": ai_eligible_count,
-        "ai_ineligible_file_count": len(results) - ai_eligible_count,
-        "ai_participated_file_count": ai_participated_count,
-        "ai_primary_decision_file_count": ai_primary_decision_count,
-        "rule_fallback_file_count": rule_fallback_count,
-        "ai_unresolved_file_count": ai_unresolved_count,
-        "ai_participation_rate": ai_participation_rate,
-        "ai_primary_decision_rate": ai_primary_decision_rate,
-        "ai_participation_target_met": (
-            ai_eligible_count > 0
-            and ai_participation_rate >= ai_participation_target
-        ),
+        "decision_policy": "ai_authoritative_rule_explanation_only",
         "ai_models_executed": ai_models_executed,
         # Retain file-level results so a completed task can be reopened and audited.
         "file_results": results,
         "high_risk_files": high_risk,
-        "warnings": summary_warnings,
+        "warnings": list(warnings or []),
         "project_engines": project_engines,
+        "project_relationship_graph": project_relationship_graph,
     }
 
 
@@ -1454,6 +1443,9 @@ def _safe_extract(
             _warn(warnings, f"已跳过可疑路径：{member.filename}")
             continue
         if not is_allowed_file(Path(name).name):
+            continue
+        if member.flag_bits & 0x1:
+            _warn(warnings, f"已跳过需要密码的加密文件：{member.filename}")
             continue
         if extracted_files >= MAX_FILES:
             _warn(warnings, f"文件数量超过 {MAX_FILES} 个，剩余源代码文件已跳过。")
@@ -1595,6 +1587,28 @@ def _append_component_hash(candidate: str, identity: str) -> str:
 def _warn(warnings: list[str], message: str) -> None:
     if len(warnings) < MAX_WARNINGS:
         warnings.append(message)
+
+
+def _build_project_relationship_view(
+    graph_samples: list[object],
+    results: list[dict[str, object]],
+    warnings: list[str],
+) -> dict[str, object] | None:
+    try:
+        return build_project_relationship_graph(
+            graph_samples,
+            {
+                str(item.get("filename") or ""): item
+                for item in results
+                if isinstance(item, dict) and item.get("filename")
+            },
+        )
+    except Exception as exc:
+        _warn(
+            warnings,
+            f"项目文件调用关系图生成失败，本次模型检测结果不受影响：{exc}",
+        )
+        return None
 
 
 def _bounded_source_content(payload: bytes, maximum_bytes: int) -> str:
