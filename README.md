@@ -1,95 +1,14 @@
-# 獬豸安码运行说明
+# 獬豸安码（比赛提交版）
 
-## 一、文件要求
+这是可直接运行的 Windows x64 完整成果包，保留前后端源代码、启动器、便携
+Python 运行环境，以及项目使用的三个模型：XGBoost、GATv2、CodeT5+。
+检测历史、扫描任务、训练任务、日志、缓存、未发布候选模型及旧版本归档均未包含。
 
-请确保以下文件和目录位于同一个根目录中，并保持相对位置不变：
+## 一键启动
 
-```text
-獬豸安码/
-├─ XiezhiCodeGuard.exe
-├─ backend/
-└─ frontend/
-```
-
-不要只复制或移动 `XiezhiCodeGuard.exe`，否则启动器将无法找到后端和前端文件。
-
-## 二、搭建运行环境
-
-### 1. 安装 Python
-
-本系统建议使用 **Python 3.12（64 位）**。
-
-安装 Python 时请勾选 **Add Python to PATH**。安装完成后打开 PowerShell，执行：
-
-```powershell
-python --version
-```
-
-如果显示 `Python 3.12.x`，说明 Python 已安装成功。
-
-如果 `python` 命令不可用，也可以检查 Python 启动器：
-
-```powershell
-py -3.12 --version
-```
-
-### 2. 创建虚拟环境
-
-在存放 `XiezhiCodeGuard.exe` 的根目录打开 PowerShell，然后执行：
-
-```powershell
-python -m venv .venv
-```
-
-如果电脑上需要通过 `py` 调用 Python，则执行：
-
-```powershell
-py -3.12 -m venv .venv
-```
-
-### 3. 激活虚拟环境
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-如果 PowerShell 提示禁止运行脚本，请先执行：
-
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\.venv\Scripts\Activate.ps1
-```
-
-该设置只对当前 PowerShell 窗口生效。
-
-### 4. 安装后端依赖
-
-虚拟环境激活后执行：
-
-```powershell
-python -m pip install --upgrade pip
-python -m pip install -r backend\requirements.txt
-```
-
-依赖安装完成后，运行环境即搭建完毕。以上步骤通常只需在首次运行前执行一次。
-
-## 三、启动系统
-
-### 方法一：双击 EXE 启动（推荐）
-
-直接双击根目录中的：
-
-```text
-XiezhiCodeGuard.exe
-```
-
-启动器会自动查找 Python、启动后端服务并打开浏览器。
-
-系统默认访问地址：
-
-```text
-http://127.0.0.1:3000
-```
+1. 将整个 `獬豸安码` 文件夹完整解压到本机磁盘。
+2. 保持目录结构不变，双击 `XiezhiCodeGuard.exe`。
+3. 等待浏览器自动打开 `http://127.0.0.1:3000`。
 
 默认登录信息：
 
@@ -98,67 +17,73 @@ http://127.0.0.1:3000
 密码：admin123
 ```
 
-关闭浏览器页面后，启动器会询问是否同时关闭后端服务。
+启动器优先使用随包提供的 `python\python.exe`，无需提前安装 Python 或依赖。
+首次启动会自动创建空白数据库和管理员账号，因此历史页初始为空属于正常现象。
 
-### 方法二：通过 PowerShell 启动
+## 目录结构
 
-如果双击 EXE 无法启动，或者需要查看错误信息，可在根目录打开 PowerShell，执行：
+```text
+獬豸安码/
+├─ XiezhiCodeGuard.exe       # 双击启动入口
+├─ python/                   # Windows x64 便携运行环境及依赖
+├─ backend/                  # Flask 后端、检测引擎与当前启用模型
+├─ frontend/                 # 页面模板与静态资源
+├─ demo_samples/             # 功能演示样例
+├─ README.md
+└─ 一键运行说明.txt
+```
+
+请勿单独移动 EXE，也不要删除 `backend\models` 中的当前模型文件；标准/深度检测
+依赖这些本地模型，全部放在包内是为了保证离线运行。
+
+## 三个模型的职责
+
+- XGBoost：单文件与批量快速初筛，覆盖已发布的语言路由；
+- CodeT5+：标准/深度模式中的代码语义分析；
+- GATv2：项目级调用关系与跨文件图分析。
+
+## 命令行启动
+
+若需要查看控制台输出，可在项目根目录打开 PowerShell：
 
 ```powershell
+.\python\python.exe backend\app.py
+```
+
+停止服务时按 `Ctrl+C`。
+
+## 可选配置
+
+```powershell
+$env:XIEZHI_PORT = "3000"
+$env:XIEZHI_ADMIN_PASSWORD = "自行设置的密码"
+$env:XIEZHI_SECRET_KEY = "自行生成的随机密钥"
+.\XiezhiCodeGuard.exe
+```
+
+- `XIEZHI_PORT`：监听端口，默认 `3000`；
+- `XIEZHI_ADMIN_PASSWORD`：只在首次创建空白数据库时设置管理员密码；
+- `XIEZHI_SECRET_KEY`：生产环境会话密钥；
+- `XIEZHI_DEEP_PYTHON`：可选的深度学习解释器；不设置时使用随包 Python。
+
+## 从系统 Python 运行（可选）
+
+便携环境损坏或需要二次开发时，可使用 Python 3.12/3.13 创建虚拟环境：
+
+```powershell
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+python -m pip install -r backend\requirements.txt
+python -m pip install -r backend\requirements-transformer.txt
 python backend\app.py
 ```
 
-看到服务启动信息后，在浏览器中打开：
+## 运行后生成的本地内容
 
-```text
-http://127.0.0.1:3000
-```
+程序运行后会重新生成以下内容，它们已写入 `.gitignore`，提交源代码时无需包含：
 
-停止服务时，回到 PowerShell 窗口按 `Ctrl+C`。
-
-## 四、常见问题
-
-### 1. 提示找不到 Python
-
-确认 Python 是否可用：
-
-```powershell
-python --version
-```
-
-也可以明确指定 EXE 使用项目虚拟环境中的 Python：
-
-```powershell
-$env:XIEZHI_PYTHON = (Resolve-Path ".\.venv\Scripts\python.exe").Path
-.\XiezhiCodeGuard.exe
-```
-
-### 2. 提示缺少 Python 模块
-
-使用虚拟环境中的 Python 重新安装依赖：
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
-```
-
-### 3. 提示端口 3000 被占用
-
-这通常表示系统已经启动，或者其他程序正在使用端口 `3000`。先关闭之前启动的后端或占用该端口的程序，再重新双击 EXE。
-
-可通过以下命令查看端口占用情况：
-
-```powershell
-Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
-```
-
-### 4. 启动器长时间停留在加载界面
-
-首次启动加载模型可能需要较长时间。可以在 PowerShell 中延长等待时间后启动：
-
-```powershell
-$env:XIEZHI_STARTUP_TIMEOUT_SECONDS = "180"
-.\XiezhiCodeGuard.exe
-```
-
-如果仍然无法启动，请使用 PowerShell 直接运行 `python backend\app.py`，根据窗口中显示的错误信息检查 Python 和依赖安装情况。
+- `backend\data\attack_detection.db*`：账号、检测记录和任务记录；
+- `backend\logs\`：启动器及后端日志；
+- `backend\data\tmp\`：扫描/推理临时文件；
+- `backend\models\candidates\`、`backend\models\archive\`：后续训练产物；
+- `__pycache__`、`.pytest_cache`、`*.pyc`：Python 测试与字节码缓存。

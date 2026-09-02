@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Drawing;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -139,6 +140,7 @@ namespace XiezhiCodeGuardLauncher
             StreamWriter stderr = new StreamWriter(lastBackendStderrLog, false);
             stdout.AutoFlush = true;
             stderr.AutoFlush = true;
+            stdout.WriteLine("Launcher Python: " + python);
             process.OutputDataReceived += (sender, args) =>
             {
                 if (args.Data != null)
@@ -161,40 +163,57 @@ namespace XiezhiCodeGuardLauncher
         private static string ResolvePythonExecutable(string backendDir)
         {
             string configured = Environment.GetEnvironmentVariable("XIEZHI_PYTHON");
-            List<string> candidates = new List<string>();
             if (!string.IsNullOrWhiteSpace(configured))
             {
-                candidates.Add(configured.Trim().Trim('"'));
+                string explicitPython = configured.Trim().Trim('"');
+                if (File.Exists(explicitPython))
+                {
+                    return explicitPython;
+                }
             }
+
+            List<string> candidates = new List<string>();
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
-            string condaPrefix = Environment.GetEnvironmentVariable("CONDA_PREFIX");
-            if (!string.IsNullOrWhiteSpace(condaPrefix))
-            {
-                candidates.Add(Path.Combine(condaPrefix, "python.exe"));
-            }
             candidates.Add(Path.Combine(appDir, "python", "python.exe"));
             candidates.Add(Path.Combine(appDir, ".venv", "Scripts", "python.exe"));
             candidates.Add(Path.Combine(appDir, "venv", "Scripts", "python.exe"));
             candidates.Add(Path.Combine(backendDir, ".venv", "Scripts", "python.exe"));
             candidates.Add(Path.Combine(backendDir, "venv", "Scripts", "python.exe"));
+
+            string pathPython = ResolveOnPath("python.exe");
+            if (!string.IsNullOrWhiteSpace(pathPython))
+            {
+                candidates.Add(pathPython);
+            }
+
+            string condaPrefix = Environment.GetEnvironmentVariable("CONDA_PREFIX");
+            if (!string.IsNullOrWhiteSpace(condaPrefix))
+            {
+                candidates.Add(Path.Combine(condaPrefix, "python.exe"));
+            }
             string driveRoot = Path.GetPathRoot(appDir);
             if (!string.IsNullOrWhiteSpace(driveRoot))
             {
                 candidates.Add(Path.Combine(driveRoot, "software", "Anaconda3", "python.exe"));
             }
             candidates.Add(@"C:\ProgramData\Anaconda3\python.exe");
+
+            foreach (string candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (File.Exists(candidate) && SupportsModelRuntime(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            // Keep the UI startable even on an incomplete installation so it
+            // can display the concrete missing-dependency reason.
             foreach (string candidate in candidates)
             {
                 if (!string.IsNullOrWhiteSpace(candidate) && File.Exists(candidate))
                 {
                     return candidate;
                 }
-            }
-
-            string pathPython = ResolveOnPath("python.exe");
-            if (!string.IsNullOrWhiteSpace(pathPython))
-            {
-                return pathPython;
             }
 
             string windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
@@ -205,6 +224,41 @@ namespace XiezhiCodeGuardLauncher
             }
 
             return "python.exe";
+        }
+
+        private static bool SupportsModelRuntime(string python)
+        {
+            const string script =
+                "import importlib.util,sys;" +
+                "mods=('flask','joblib','sklearn','xgboost','torch','torch_geometric','transformers','safetensors');" +
+                "sys.exit(0 if all(importlib.util.find_spec(m) is not None for m in mods) else 1)";
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = python;
+                psi.Arguments = "-c \"" + script + "\"";
+                psi.UseShellExecute = false;
+                psi.CreateNoWindow = true;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                using (Process process = Process.Start(psi))
+                {
+                    if (process == null)
+                    {
+                        return false;
+                    }
+                    if (!process.WaitForExit(15000))
+                    {
+                        process.Kill();
+                        return false;
+                    }
+                    return process.ExitCode == 0;
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static string ResolveOnPath(string executable)

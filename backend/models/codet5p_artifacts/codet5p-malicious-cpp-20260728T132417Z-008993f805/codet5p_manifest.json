@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "model_family": "codet5p",
+  "model_version": "codet5p-malicious-cpp-20260728T132417Z-008993f805",
+  "base_version": "codet5p-220m-base",
+  "checkpoint": "Salesforce/codet5p-220m",
+  "task": "malicious_intent",
+  "positive_label": "malicious",
+  "negative_label": "benign",
+  "supported_languages": [
+    "cpp"
+  ],
+  "dataset_sha256": "008993f80592a83ff4be0f94cbd59f5d72da9d2c20455dffcd25d5e559c587fc",
+  "samples": {
+    "train": 2567,
+    "validation": 695,
+    "test": 518
+  },
+  "label_counts": {
+    "train": {
+      "benign": 2011,
+      "malicious": 556
+    },
+    "validation": {
+      "benign": 600,
+      "malicious": 95
+    },
+    "test": {
+      "benign": 419,
+      "malicious": 99
+    }
+  },
+  "threshold": 0.8,
+  "trained_threshold": 0.99,
+  "threshold_policy": {
+    "minimum_language_threshold": 0.7,
+    "preferred_center": 0.8,
+    "maximum_decision_threshold": 0.85,
+    "applied_to_existing_artifact": true
+  },
+  "temperature": 1.4009332036301778,
+  "validation_metrics": {
+    "accuracy": 0.99568345323741,
+    "precision": 0.9791666666666666,
+    "recall": 0.9894736842105263,
+    "f1": 0.9842931937172775,
+    "false_positive_rate": 0.0033333333333333335,
+    "false_negative_rate": 0.010526315789473684,
+    "brier_score": 0.007551975081287216,
+    "samples": 695,
+    "positive_samples": 95,
+    "negative_samples": 600,
+    "threshold": 0.99,
+    "confusion_matrix": {
+      "tn": 598,
+      "fp": 2,
+      "fn": 1,
+      "tp": 94
+    }
+  },
+  "test_metrics": {
+    "accuracy": 0.9884169884169884,
+    "precision": 0.9894736842105263,
+    "recall": 0.9494949494949495,
+    "f1": 0.9690721649484537,
+    "false_positive_rate": 0.002386634844868735,
+    "false_negative_rate": 0.050505050505050504,
+    "brier_score": 0.016146807328907612,
+    "samples": 518,
+    "positive_samples": 99,
+    "negative_samples": 419,
+    "threshold": 0.99,
+    "confusion_matrix": {
+      "tn": 418,
+      "fp": 1,
+      "fn": 5,
+      "tp": 94
+    }
+  },
+  "test_metrics_by_language": {
+    "cpp": {
+      "accuracy": 0.9884169884169884,
+      "precision": 0.9894736842105263,
+      "recall": 0.9494949494949495,
+      "f1": 0.9690721649484537,
+      "false_positive_rate": 0.002386634844868735,
+      "false_negative_rate": 0.050505050505050504,
+      "brier_score": 0.016146807328907612,
+      "samples": 518,
+      "positive_samples": 99,
+      "negative_samples": 419,
+      "threshold": 0.99,
+      "confusion_matrix": {
+        "tn": 418,
+        "fp": 1,
+        "fn": 5,
+        "tp": 94
+      }
+    }
+  },
+  "test_metrics_by_source": {
+    "crossvul": {
+      "accuracy": 1.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.0,
+      "brier_score": 0.02167917310050067,
+      "samples": 64,
+      "positive_samples": 0,
+      "negative_samples": 64,
+      "threshold": 0.99,
+      "confusion_matrix": {
+        "tn": 64,
+        "fp": 0,
+        "fn": 0,
+        "tp": 0
+      }
+    },
+    "the_stack_smol_cpp": {
+      "accuracy": 0.9966666666666667,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "false_positive_rate": 0.0033333333333333335,
+      "false_negative_rate": 0.0,
+      "brier_score": 0.00979921584454808,
+      "samples": 300,
+      "positive_samples": 0,
+      "negative_samples": 300,
+      "threshold": 0.99,
+      "confusion_matrix": {
+        "tn": 299,
+        "fp": 1,
+        "fn": 0,
+        "tp": 0
+      }
+    },
+    "vx_underground_malware_source": {
+      "accuracy": 0.9494949494949495,
+      "precision": 1.0,
+      "recall": 0.9494949494949495,
+      "f1": 0.9740932642487047,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.050505050505050504,
+      "brier_score": 0.04076377683517734,
+      "samples": 99,
+      "positive_samples": 99,
+      "negative_samples": 0,
+      "threshold": 0.99,
+      "confusion_matrix": {
+        "tn": 0,
+        "fp": 0,
+        "fn": 5,
+        "tp": 94
+      }
+    },
+    "zenodo_13870382": {
+      "accuracy": 1.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.0,
+      "brier_score": 2.182650718393012e-05,
+      "samples": 55,
+      "positive_samples": 0,
+      "negative_samples": 55,
+      "threshold": 0.99,
+      "confusion_matrix": {
+        "tn": 55,
+        "fp": 0,
+        "fn": 0,
+        "tp": 0
+      }
+    }
+  },
+  "deployment_gate": {
+    "minimum_precision": 0.9,
+    "maximum_false_positive_rate": 0.1,
+    "maximum_false_negative_rate": 0.1
+  },
+  "passed_deployment_gate": true,
+  "runtime_ready": true,
+  "calibrated": true,
+  "calibration_split": "validation",
+  "family_isolation_verified": true,
+  "config": {
+    "max_length": 512,
+    "stride": 128,
+    "maximum_code_characters": 32768,
+    "maximum_train_windows": 3,
+    "maximum_eval_windows": 8,
+    "window_aggregation": "max_logit",
+    "dropout": 0.15
+  },
+  "training": {
+    "device": "cuda",
+    "torch_version": "2.5.1+cu121",
+    "epochs_completed": 3,
+    "batch_size": 4,
+    "learning_rate": 2e-05,
+    "pairwise_weight": 0.2,
+    "pairwise_margin": 1.0,
+    "seed": 20260723,
+    "mixed_precision": true,
+    "resumed_from": null
+  },
+  "files": [
+    "codet5p_classifier.safetensors",
+    "config.json",
+    "merges.txt",
+    "special_tokens_map.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "vocab.json"
+  ],
+  "created_at": "2026-07-28T13:24:17+00:00"
+}

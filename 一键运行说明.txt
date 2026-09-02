@@ -1,0 +1,28 @@
+獬豸安码比赛提交版（Windows x64）
+
+使用方法
+1. 将整个文件夹完整解压到本机磁盘，不要在压缩软件中直接运行。
+2. 保持 XiezhiCodeGuard.exe、python、backend、frontend 的相对位置不变。
+3. 双击 XiezhiCodeGuard.exe，等待浏览器自动打开。
+4. 默认地址：http://127.0.0.1:3000
+5. 默认账号：admin
+6. 默认密码：admin123
+
+本包已包含
+- Windows x64 便携 Python 3.13 及运行依赖
+- 前端、后端、启动器和完整静态资源
+- 项目使用的三个模型：XGBoost、GATv2、CodeT5+
+- 功能演示样例与独立真实世界挑战集清单
+
+提交版初始状态
+- 不包含检测历史、扫描任务、训练任务和用户运行记录
+- 不包含日志、临时文件、Python/pytest 缓存
+- 不包含未发布候选模型和旧版本归档
+- 首次启动会自动创建空白数据库及默认管理员账号
+
+命令行备用启动方式
+在本目录打开 PowerShell，执行：
+.\python\python.exe backend\app.py
+
+看到服务启动信息后访问：http://127.0.0.1:3000
+停止服务时按 Ctrl+C。

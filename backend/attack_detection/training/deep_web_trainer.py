@@ -1,4 +1,4 @@
-"""Web-queue adapters for ByteCNN-TCN and GATv2 training.
+"""Web-queue adapters for GATv2 and CodeT5+ training.
 
 The Flask runtime intentionally does not depend on PyTorch.  These adapters
 prepare the uploaded dataset, run the existing deep trainers in the configured
@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from copy import deepcopy
 from pathlib import Path
@@ -31,58 +32,6 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 MODEL_DIR = BACKEND_DIR / "models"
 TEMP_ROOT = BACKEND_DIR / "data" / "tmp" / "deep_training"
 CANDIDATE_ROOT = MODEL_DIR / "candidates" / "web_training"
-DEFAULT_DEEP_PYTHON = Path(r"D:\software\anaconda\envs\drone\python.exe")
-
-
-def train_bytetcn(
-    dataset_path: str | Path,
-    progress_callback: ProgressCallback | None = None,
-) -> dict[str, object]:
-    """Export a reviewed code dataset and train a versioned ByteCNN-TCN candidate."""
-
-    python_path = _deep_python()
-    source = Path(dataset_path).resolve()
-    _progress(progress_callback, 0.06, "正在整理 ByteCNN-TCN 训练集")
-    TEMP_ROOT.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="bytetcn-", dir=TEMP_ROOT) as temporary:
-        run_root = Path(temporary)
-        prepared = run_root / "dataset"
-        output = run_root / "output"
-        _run_module(
-            python_path,
-            "attack_detection.training.byte_dataset",
-            "--dataset", str(source),
-            "--output-dir", str(prepared),
-        )
-        report = _read_json(prepared / "manifest.json")
-        missing_splits = [
-            split for split in ("train", "validation", "test")
-            if int((report.get("records") or {}).get(split) or 0) == 0
-        ]
-        if missing_splits:
-            raise ValueError("ByteCNN-TCN 训练集缺少有效分段：" + "、".join(missing_splits))
-
-        _progress(progress_callback, 0.18, "正在训练 ByteCNN-TCN")
-        _run_module(
-            python_path,
-            "attack_detection.training.byte_tcn_trainer",
-            "--dataset-dir", str(prepared),
-            "--output-dir", str(output),
-        )
-        manifest_path = output / "bytetcn_manifest.json"
-        manifest = _read_json(manifest_path)
-        published = bool(manifest.get("runtime_ready"))
-        manifest["quality_gate"] = {
-            "passed": published,
-            "rule": "至少一个任务/语言组合通过训练器的 F1、误报率和漏报率门禁",
-        }
-        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-        _retain_candidate("bytetcn", output, manifest)
-        if published:
-            _archive_current("bytetcn")
-            _publish_bytetcn(output, manifest)
-        _progress(progress_callback, 0.97, "正在登记 ByteCNN-TCN 模型版本")
-        return {**manifest, "published": published}
 
 
 def train_gatv2(
@@ -207,7 +156,8 @@ def is_graph_training_file(path: str | Path) -> bool:
 
 
 def _deep_python() -> Path:
-    path = Path(os.environ.get("XIEZHI_DEEP_PYTHON") or DEFAULT_DEEP_PYTHON)
+    configured = str(os.environ.get("XIEZHI_DEEP_PYTHON") or "").strip()
+    path = Path(configured) if configured else Path(sys.executable)
     if not path.is_file():
         raise RuntimeError(f"深度学习解释器不可用：{path}")
     return path
@@ -260,7 +210,9 @@ def _retain_candidate(family: str, output: Path, manifest: dict[str, Any]) -> Pa
 
 
 def _archive_current(family: str) -> None:
-    manifest_name = "bytetcn_manifest.json" if family == "bytetcn" else "gatv2_manifest.json"
+    if family != "gatv2":
+        raise ValueError(f"不支持归档模型：{family}")
+    manifest_name = "gatv2_manifest.json"
     manifest_path = MODEL_DIR / manifest_name
     if not manifest_path.is_file():
         return
@@ -275,30 +227,9 @@ def _archive_current(family: str) -> None:
         source = MODEL_DIR / str(name)
         if source.is_file():
             shutil.copy2(source, destination / source.name)
-    history_name = "bytetcn_history.json" if family == "bytetcn" else "gatv2_history.json"
+    history_name = "gatv2_history.json"
     if (MODEL_DIR / history_name).is_file():
         shutil.copy2(MODEL_DIR / history_name, destination / history_name)
-
-
-def _publish_bytetcn(output: Path, manifest: dict[str, Any]) -> None:
-    runtime_manifest = deepcopy(manifest)
-    mapping = _copy_versioned_artifacts(output, manifest)
-    runtime_manifest["files"] = [mapping[str(name)] for name in manifest.get("files") or []]
-    default_file = runtime_manifest["files"][0]
-    task_models = deepcopy(runtime_manifest.get("task_models") or {})
-    for task, languages in (runtime_manifest.get("task_language_support") or {}).items():
-        if not languages:
-            continue
-        settings = dict(task_models.get(task) or {})
-        settings["file"] = mapping.get(str(settings.get("file") or ""), default_file)
-        settings.setdefault("config", runtime_manifest.get("config") or {})
-        settings.setdefault("line_localization_validated", task == "malicious_intent")
-        task_models[task] = settings
-    runtime_manifest["task_models"] = task_models
-    history = output / "bytetcn_history.json"
-    if history.is_file():
-        shutil.copy2(history, MODEL_DIR / history.name)
-    _atomic_json(MODEL_DIR / "bytetcn_manifest.json", runtime_manifest)
 
 
 def _publish_gatv2(output: Path, manifest: dict[str, Any]) -> None:

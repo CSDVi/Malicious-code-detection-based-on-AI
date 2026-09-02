@@ -1,5 +1,35 @@
 {% from "attack/_report_chart_macros.html" import categorical_columns, model_radar %}
 <section class="report-chart-grid project-report-charts section-block">
+    {% set cross_file = project_report_insights.cross_file_summary %}
+    {% if cross_file %}
+    <article class="panel motion-card report-chart-card report-chart-card-wide">
+        <div class="section-title compact-title report-chart-heading">
+            <div><h2>跨文件调用与污点证据</h2></div>
+            <span class="report-chart-unit">{{ cross_file.resolved_call_count }} 条已解析调用 · {{ cross_file.complete_chain_count }} 条完整链</span>
+        </div>
+        {% if cross_file.most_suspicious_component %}
+        <div class="project-graph-model-status status-completed">
+            <span class="status-dot status-completed"></span>
+            <strong>最可疑组件</strong>
+            <code>{{ cross_file.most_suspicious_component.path }}</code>
+            {% if cross_file.most_suspicious_component.probability_drop is defined %}<span>消融概率下降 {{ cross_file.most_suspicious_component.probability_drop }}</span>{% endif %}
+            {% if cross_file.most_suspicious_component_basis %}<small>{{ cross_file.most_suspicious_component_basis }}</small>{% endif %}
+        </div>
+        {% endif %}
+        {% for chain in cross_file.chains %}
+        <details class="technical-details section-block"{% if loop.first %} open{% endif %}>
+            <summary>{{ chain.chain_id }} · {{ chain.files|length }} 个文件 · 置信度 {{ chain.confidence }}</summary>
+            <div class="table-scroll"><table class="data-table">
+                <thead><tr><th>阶段</th><th>文件</th><th>函数</th><th>行号</th><th>变量</th><th>调用/证据</th></tr></thead>
+                <tbody>{% for step in chain.steps %}<tr><td>{{ step.stage_label }}</td><td><code>{{ step.file }}</code></td><td><code>{{ step.function }}</code></td><td>{{ step.line or '—' }}</td><td><code>{{ step.variable or '—' }}</code></td><td>{% if step.callee %}<code>{{ step.callee }}</code><br>{% endif %}{{ step.snippet }}</td></tr>{% endfor %}</tbody>
+            </table></div>
+        </details>
+        {% else %}
+        <div class="empty-state project-graph-empty">已解析 {{ cross_file.resolved_call_count }} 条跨文件调用，但未发现证据完整的跨文件风险链；这表示当前证据不足以确认跨文件风险，并非检测失败。</div>
+        {% endfor %}
+    </article>
+    {% endif %}
+
     {% set relationship_graph = project_report_insights.relationship_graph %}
     {% set graph_status = project_report_insights.graph_model_status %}
     {% if relationship_graph or graph_status %}

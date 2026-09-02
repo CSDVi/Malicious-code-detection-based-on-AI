@@ -52,6 +52,7 @@ DISPLAY_ZH = {
     "Unsafe Deserialization": "不安全反序列化", "Secret Exposure": "敏感信息泄露",
     "WebShell": "网页后门", "Download or Remote Load": "下载或远程加载",
     "Download and Execute": "下载并执行", "Obfuscated Payload": "混淆载荷",
+    "Ransomware Behavior Chain": "勒索型文件处理链",
     "Install Hook Execution": "安装钩子执行", "Credential Exfiltration": "凭据外传",
     "Credential Collection": "凭据收集", "Persistence": "持久化",
     "Insecure Direct Object Reference": "不安全的直接对象引用",

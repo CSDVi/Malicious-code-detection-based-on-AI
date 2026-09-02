@@ -6,6 +6,7 @@ import json
 import os
 import queue
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -22,7 +23,6 @@ from attack_detection.cancellation import (
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 MODEL_DIR = BACKEND_DIR / "models"
-DEFAULT_DEEP_PYTHON = Path(r"D:\software\anaconda\envs\drone\python.exe")
 _PERSISTENT_LOCK = threading.Lock()
 _PERSISTENT_PROCESS: subprocess.Popen[str] | None = None
 PROJECT_INFERENCE_TIMEOUT_SECONDS = max(
@@ -39,6 +39,19 @@ PROJECT_SINGLE_INFERENCE_TIMEOUT_SECONDS = max(
         "14",
     )),
 )
+
+
+def configured_deep_python() -> Path:
+    """Return an available interpreter for CodeT5+ inference.
+
+    An explicit environment override remains authoritative. Ordinary installs
+    use the same interpreter that launched the application.
+    """
+
+    configured = str(os.environ.get("XIEZHI_DEEP_PYTHON") or "").strip()
+    if configured:
+        return Path(configured)
+    return Path(sys.executable)
 
 
 def _run_persistent_batch(
@@ -234,7 +247,7 @@ class CodeT5PEngine:
     ) -> dict[str, Any]:
         started = time.perf_counter()
         registry_path = MODEL_DIR / "codet5p_registry.json"
-        python_path = Path(os.environ.get("XIEZHI_DEEP_PYTHON") or DEFAULT_DEEP_PYTHON)
+        python_path = configured_deep_python()
         if not registry_path.is_file():
             return self._unavailable(started, "CodeT5+ 220M registry is missing")
         try:
@@ -281,7 +294,7 @@ class CodeT5PEngine:
             return []
         started = time.perf_counter()
         registry_path = MODEL_DIR / "codet5p_registry.json"
-        python_path = Path(os.environ.get("XIEZHI_DEEP_PYTHON") or DEFAULT_DEEP_PYTHON)
+        python_path = configured_deep_python()
         if not registry_path.is_file():
             return [self._unavailable(started, "CodeT5+ 220M registry is missing") for _ in requests]
         try:

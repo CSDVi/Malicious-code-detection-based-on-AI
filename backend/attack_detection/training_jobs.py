@@ -15,6 +15,7 @@ from .trainer import train_model
 
 ProgressCallback = Callable[[float, str], None]
 Trainer = Callable[[str | Path, ProgressCallback | None], dict[str, object]]
+Preflight = Callable[[str | Path, ProgressCallback | None], dict[str, object]]
 CompletionCallback = Callable[[], None]
 
 
@@ -43,12 +44,14 @@ class TrainingJob:
     finished_at: str | None = None
     on_complete: CompletionCallback | None = None
     trainer: Trainer | None = None
+    preflight: Preflight | None = None
 
     def persistence_payload(self) -> dict[str, object]:
         payload = self.__dict__.copy()
         payload.pop("dataset_path", None)
         payload.pop("on_complete", None)
         payload.pop("trainer", None)
+        payload.pop("preflight", None)
         return payload
 
 
@@ -74,6 +77,7 @@ class TrainingJobQueue:
         training_task: str = "",
         target_language: str = "all",
         trainer: Trainer | None = None,
+        preflight: Preflight | None = None,
         on_complete: CompletionCallback | None = None,
     ) -> TrainingJob:
         with self._lock:
@@ -92,6 +96,7 @@ class TrainingJobQueue:
                 created_at=_now(),
                 on_complete=on_complete,
                 trainer=trainer,
+                preflight=preflight,
             )
             save_training_job(job.persistence_payload())
             self._queue.put_nowait(job)
@@ -126,16 +131,37 @@ class TrainingJobQueue:
         job.status = "running"
         job.started_at = _now()
         job.progress = 0.02
-        job.log = "正在读取训练数据"
+        job.log = "正在进行投毒检测"
         save_training_job(job.persistence_payload())
 
-        def update(progress: float, stage: str) -> None:
+        def preflight_update(progress: float, stage: str) -> None:
             job.progress = min(0.99, max(job.progress, float(progress)))
             job.log = str(stage)
             save_training_job(job.persistence_payload())
 
+        if job.preflight:
+            try:
+                job.preflight(job.dataset_path, preflight_update)
+            except Exception as exc:
+                job.status = "failed"
+                job.error = str(exc)[:1000]
+                job.log = "投毒检测失败，已阻断训练"
+                job.finished_at = _now()
+                save_training_job(job.persistence_payload())
+                return
+
+        job.progress = max(job.progress, 0.16)
+        job.log = "投毒检测通过，开始模型训练"
+        save_training_job(job.persistence_payload())
+
+        def training_update(progress: float, stage: str) -> None:
+            mapped = 0.16 + 0.83 * min(1.0, max(0.0, float(progress)))
+            job.progress = min(0.99, max(job.progress, mapped))
+            job.log = str(stage)
+            save_training_job(job.persistence_payload())
+
         try:
-            metrics = (job.trainer or self._trainer)(job.dataset_path, update)
+            metrics = (job.trainer or self._trainer)(job.dataset_path, training_update)
             job.model_version = str(metrics.get("model_version") or "") or None
             job.status = "completed"
             job.progress = 1.0

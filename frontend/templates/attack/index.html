@@ -35,9 +35,9 @@
 
     <section class="section-block">
         <article class="panel motion-card">
-                <div class="section-title compact-title"><div><h2>上传文件</h2><p>支持 {{ single_file_language_labels|join('、') }} 及 EXE/DLL/SYS/OCX，最大 20 MB。</p></div></div>
+                <div class="section-title compact-title"><div><h2>上传文件</h2><p>支持 {{ single_file_language_labels|join('、') }}、TXT 和无后缀文本文件（按内容识别语言），以及 EXE/DLL/SYS/OCX，最大 20 MB。</p></div></div>
             <label class="upload-zone compact-upload">
-                <input type="file" name="code_file" accept="{{ single_file_accept }}" required>
+                <input type="file" name="code_file"{% if single_file_accept %} accept="{{ single_file_accept }}"{% endif %} required>
                 <span class="upload-icon" aria-hidden="true"><i class="bi bi-file-earmark-code"></i></span>
                 <strong>拖入代码文件或点击选择，也可上传其他样本文件</strong>
                 <span class="metric-sub" data-file-label>尚未选择文件</span>

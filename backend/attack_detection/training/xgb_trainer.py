@@ -16,6 +16,7 @@ from attack_detection.dataset import CodeSample, is_task_training_eligible, is_t
 from attack_detection.features.static_features import FEATURE_NAMES, feature_vector
 from attack_detection.trainer import QUALITY_GATE, _evaluate, _segments, _threshold, meets_quality_gate
 from attack_detection.training.language_coverage import eligible_task_languages
+from attack_detection.training.sklearn_compat import calibrate_prefit
 
 MODEL_DIR = Path(__file__).resolve().parents[2] / "models"
 REGISTRY_ROOT = MODEL_DIR / "xgb_registry"
@@ -99,7 +100,6 @@ def _train_task(
     feature_cache: dict[tuple[str, str], list[float]],
 ) -> dict[str, Any]:
     from joblib import dump
-    from sklearn.calibration import CalibratedClassifierCV
     from xgboost import XGBClassifier
 
     positive = str(config["positive"])
@@ -174,8 +174,11 @@ def _train_task(
         eval_set=[(vectors["validation"], labels["validation"])],
         verbose=False,
     )
-    calibrated = CalibratedClassifierCV(model, method="sigmoid", cv="prefit")
-    calibrated.fit(vectors["validation"], labels["validation"])
+    calibrated = calibrate_prefit(
+        model,
+        vectors["validation"],
+        labels["validation"],
+    )
 
     validation_scores = [float(row[1]) for row in calibrated.predict_proba(vectors["validation"])]
     validation_labels = [sample.label for sample in partitions["validation"]]

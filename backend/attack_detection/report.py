@@ -57,6 +57,7 @@ DISPLAY_ZH = {
     "WebShell": "网页后门",
     "Download or Remote Load": "下载或远程加载",
     "Download and Execute": "下载并执行",
+    "Ransomware Behavior Chain": "勒索型文件处理链",
     "Obfuscated Payload": "混淆载荷",
     "Install Hook Execution": "安装钩子执行",
     "Credential Exfiltration": "凭据外传",

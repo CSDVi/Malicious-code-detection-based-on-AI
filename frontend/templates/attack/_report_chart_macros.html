@@ -12,11 +12,12 @@
         {% for series in radar.series %}
         <g aria-label="{{ series.model_name }}：{{ series.aria_metrics }}">
             <polygon points="{{ series.points }}" class="report-radar-shape report-radar-series-{{ series.style_key }}"></polygon>
-            {% for dot in series.dots %}<circle cx="{{ dot.x }}" cy="{{ dot.y }}" r="3" class="report-radar-dot report-radar-series-{{ series.style_key }}"></circle>{% endfor %}
+            {% for dot in series.dots %}<circle cx="{{ dot.x }}" cy="{{ dot.y }}" r="3" class="report-radar-dot report-radar-series-{{ series.style_key }}" data-radar-series-dot data-axis-index="{{ loop.index0 }}" data-model-name="{{ series.model_name }}" data-style-key="{{ series.style_key }}" data-value="{{ '%.2f'|format(dot.percent) }}"></circle>{% endfor %}
         </g>
         {% endfor %}
         {% for axis in radar.axes %}
         <text x="{{ axis.label_x }}" y="{{ axis.label_y }}" text-anchor="{{ axis.anchor }}" class="report-radar-label"><tspan x="{{ axis.label_x }}">{{ axis.label }} ({{ axis.abbreviation }})</tspan></text>
+        <circle cx="{{ axis.label_x }}" cy="{{ axis.label_y - 4 }}" r="25" class="report-radar-hover-target" tabindex="0" data-radar-axis-index="{{ loop.index0 }}" data-axis-label="{{ axis.label }}" data-axis-abbreviation="{{ axis.abbreviation }}" aria-label="查看{{ axis.label }}各模型数值"></circle>
         {% endfor %}
     </svg>
     <div class="report-radar-model-legend" aria-label="执行模型与版本">

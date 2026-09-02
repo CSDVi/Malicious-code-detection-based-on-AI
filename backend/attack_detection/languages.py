@@ -52,6 +52,7 @@ SOURCE_EXTENSIONS = {
     extension for extension, language in EXTENSION_LANGUAGE.items()
     if language != "binary"
 }
+GENERIC_TEXT_EXTENSIONS = {"", ".txt"}
 BINARY_EXTENSIONS = {
     extension for extension, language in EXTENSION_LANGUAGE.items()
     if language == "binary"
@@ -106,6 +107,40 @@ def detect_source_language(path: str, content: str | None = None) -> str:
     return infer_language_from_content(content)
 
 
+def is_generic_text_path(path: str) -> bool:
+    """Return whether a path requires content-based source-language detection."""
+
+    return os.path.splitext(str(path).lower())[1] in GENERIC_TEXT_EXTENSIONS
+
+
+def is_probably_text_payload(payload: bytes, *, sample_size: int = 64 * 1024) -> bool:
+    """Reject obvious binary data while permitting UTF-8, CJK, and BOM text."""
+
+    sample = bytes(payload[:sample_size])
+    if not sample:
+        return True
+    if sample.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return True
+    if b"\x00" in sample:
+        return False
+    allowed_controls = {8, 9, 10, 12, 13, 27}
+    unexpected_controls = sum(
+        byte < 32 and byte not in allowed_controls
+        for byte in sample
+    )
+    return unexpected_controls / len(sample) <= 0.02
+
+
+def decode_source_payload(payload: bytes) -> str:
+    """Decode uploaded source text without losing common Unicode BOM formats."""
+
+    if payload.startswith(b"\xef\xbb\xbf"):
+        return payload.decode("utf-8-sig", errors="replace")
+    if payload.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return payload.decode("utf-16", errors="replace")
+    return payload.decode("utf-8", errors="ignore")
+
+
 def display_language(language: str, path: str = "") -> str:
     """Return a concrete UI language without changing the model route.
 
@@ -118,7 +153,7 @@ def display_language(language: str, path: str = "") -> str:
     if normalized == "config":
         suffix = os.path.splitext(str(path).lower())[1]
         return CONFIG_DISPLAY_LANGUAGE.get(suffix, "config")
-    if normalized == "unknown" and os.path.splitext(str(path).lower())[1] == ".txt":
+    if normalized == "unknown" and is_generic_text_path(path):
         return "text"
     return normalized
 
@@ -130,10 +165,27 @@ def infer_language_from_content(content: str) -> str:
     if not text.strip():
         return "unknown"
     lowered = text.lower()
+    first_line = text.lstrip().splitlines()[0] if text.lstrip() else ""
+    if first_line.startswith("#!"):
+        shebang = first_line.lower()
+        if re.search(r"\bpython(?:\d+(?:\.\d+)*)?\b", shebang):
+            return "python"
+        if re.search(r"\b(?:node|nodejs|deno|bun)\b", shebang):
+            return "javascript"
+        if re.search(r"\b(?:pwsh|powershell)\b", shebang):
+            return "powershell"
+        if re.search(r"\bruby\b", shebang):
+            return "ruby"
+        if re.search(r"\bperl\b", shebang):
+            return "perl"
+        if re.search(r"\blua\b", shebang):
+            return "lua"
     if re.search(r"<\?(?:php|=)", lowered) or (
         re.search(r"\$[a-z_]\w*", lowered) and re.search(r"\b(?:echo|function|include|require|eval)\b", lowered)
     ):
         return "php"
+    if re.search(r"<!doctype\s+html|<html\b|<(?:body|form|head)\b", lowered):
+        return "html"
     if re.search(r"^\s*#!.*\b(?:ba|z|k)?sh\b", lowered, re.MULTILINE) or (
         re.search(r"\b(?:then|fi|esac)\b", lowered) and re.search(r"\$\{|\$\(", text)
     ):
@@ -219,7 +271,7 @@ def infer_language_from_content(content: str) -> str:
         return "javascript"
     if re.search(r"^\s*(?:select|insert|update|delete|create|alter|drop)\b", lowered, re.MULTILINE):
         return "sql"
-    if re.search(r"<!doctype\s+html|<html\b|<(?:script|body|form)\b", lowered):
+    if re.search(r"<(?:script)\b", lowered):
         return "html"
     stripped = text.lstrip()
     if stripped.startswith(("{", "[")):

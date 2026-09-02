@@ -1407,7 +1407,7 @@ code { color: #efc66f; white-space: pre-wrap; word-break: break-all; }
 .evidence-head > div { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px; }
 .evidence-head strong { font-size: 15px; }
 .evidence-head div span { color: var(--soft); font-size: 13px; }
-.suspicion-badge { flex: 0 0 auto; padding: 5px 8px; border: 1px solid rgba(255,159,10,.25); border-radius: 5px; background: rgba(255,159,10,.09); color: #ffd18a; font-size: 12px; font-weight: 700; }
+.suspicion-badge { flex: 0 0 auto; padding: 5px 8px; border: 1px solid currentColor; border-radius: 5px; background: color-mix(in srgb, currentColor 9%, transparent); color: var(--muted); font-size: 12px; font-weight: 700; }
 .evidence-group { border-color: rgba(224,183,94,.2); }
 .evidence-group-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 15px 16px; border-bottom: 1px solid rgba(224,183,94,.16); background: rgba(224,183,94,.045); }
 .evidence-group-head > div { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px; }
@@ -1415,6 +1415,16 @@ code { color: #efc66f; white-space: pre-wrap; word-break: break-all; }
 .evidence-group-head span, .evidence-group-head small { color: var(--muted); font-size: 12px; }
 .evidence-occurrence-list { display: grid; gap: 10px; padding: 12px 14px; }
 .evidence-occurrence { overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: rgba(255,255,255,.018); }
+.evidence-occurrence.suspicion-level-safe { border-color: rgba(52,199,89,.46); }
+.evidence-occurrence.suspicion-level-low { border-color: rgba(244,211,94,.46); }
+.evidence-occurrence.suspicion-level-medium { border-color: rgba(255,159,10,.52); }
+.evidence-occurrence.suspicion-level-high { border-color: rgba(255,69,58,.56); }
+.evidence-occurrence.suspicion-level-critical { border-color: rgba(191,90,242,.58); }
+.suspicion-level-safe .suspicion-badge { color: #34c759; }
+.suspicion-level-low .suspicion-badge { color: #f4d35e; }
+.suspicion-level-medium .suspicion-badge { color: #ff9f0a; }
+.suspicion-level-high .suspicion-badge { color: #ff453a; }
+.suspicion-level-critical .suspicion-badge { color: #bf5af2; }
 .evidence-occurrence-head { padding: 10px 12px; }
 .evidence-occurrence-head strong { font-size: 13px; }
 .evidence-occurrence .evidence-trace { margin: 12px; }
@@ -1839,6 +1849,20 @@ code { color: #efc66f; white-space: pre-wrap; word-break: break-all; }
     .history-section-filter .secondary-action {
         flex: 1 1 130px;
     }
+}
+
+/* HuangLing's first glyph has a large negative left side-bearing. Give the
+   painted glyph room so the overview title does not crop the left of “獬”. */
+.dashboard-home .hero-copy h1.hero-brand-title {
+    overflow: visible;
+    padding-left: .18em;
+    margin-left: -.18em;
+}
+
+.dashboard-home .hero-copy h1.hero-brand-title .hero-brand-xiezhi {
+    overflow: visible;
+    padding: .08em .06em .12em .18em;
+    margin: -.08em -.06em -.12em -.18em;
 }
 
 /* Lightweight SpecularButton treatment for dynamically rendered scan-job actions. */
@@ -2506,6 +2530,38 @@ code { color: #efc66f; white-space: pre-wrap; word-break: break-all; }
     font-size: 8px;
     font-variant-numeric: lining-nums tabular-nums;
 }
+
+.report-radar-hover-target {
+    fill: transparent;
+    stroke: transparent;
+    cursor: help;
+    pointer-events: all;
+}
+
+.report-radar-tooltip {
+    position: fixed;
+    z-index: 1000;
+    min-width: 190px;
+    padding: 10px 12px;
+    border: 1px solid rgba(224, 183, 94, .34);
+    border-radius: 7px;
+    background: rgba(24, 19, 13, .96);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .34);
+    color: #d9ceb8;
+    font-size: 11px;
+    line-height: 1.55;
+    pointer-events: none;
+}
+
+.report-radar-tooltip[hidden] { display: none; }
+.report-radar-tooltip strong { display: block; margin-bottom: 5px; color: #efc66f; }
+.report-radar-tooltip-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.report-radar-tooltip-row i { width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: #aaa; }
+.report-radar-tooltip-row i.codet5p { background: #d6a84e; }
+.report-radar-tooltip-row i.xgboost { background: #5398cd; }
+.report-radar-tooltip-row i.gatv2 { background: #be6481; }
+.report-radar-tooltip-row span { display: flex; align-items: center; }
+.report-radar-tooltip-row b { color: #f0e4ce; font-variant-numeric: tabular-nums; }
 
 .report-radar-model-legend {
     display: grid;
@@ -4400,7 +4456,86 @@ pre,
 }
 .training-permission-note { margin: 0 0 18px; color: var(--muted); }
 .training-permission-note i { margin-right: 7px; color: #d9aa50; }
-.training-history-table { min-width: 960px; }
+.training-history-table { min-width: 1180px; }
+.training-job-progress { min-width: 280px; }
+.training-job-progress > div:first-child {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+.training-job-progress > div:first-child span {
+    overflow: hidden;
+    color: var(--soft);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.training-job-progress > div:first-child strong {
+    color: #e9bd64;
+    font-size: 11px;
+}
+.training-job-progress-track {
+    position: relative;
+    height: 6px;
+    margin-top: 8px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.07);
+}
+.training-job-progress-track::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    left: 16%;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.2);
+}
+.training-job-progress-track i {
+    display: block;
+    width: var(--training-progress);
+    min-width: 2px;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #a67929, #edbd58);
+    box-shadow: 0 0 10px rgba(237, 189, 88, 0.26);
+    transition: width 0.45s ease;
+}
+.training-job-progress.stage-completed .training-job-progress-track i {
+    background: linear-gradient(90deg, #21843d, #54d776);
+}
+.training-job-progress.stage-failed .training-job-progress-track i {
+    background: linear-gradient(90deg, #9d2924, #ff6258);
+}
+.training-stage-sequence {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 7px;
+}
+.training-stage-sequence span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--muted);
+    font-size: 9px;
+    white-space: nowrap;
+}
+.training-stage-sequence b { color: rgba(225, 184, 94, 0.28); font-size: 8px; }
+.training-stage-sequence .is-current { color: #efc66f; }
+.training-stage-sequence .is-done { color: #69d784; }
+.training-stage-sequence .is-failed { color: #ff756b; }
+.training-stage-sequence .is-blocked { color: #746d60; text-decoration: line-through; }
+.training-job-error {
+    display: block;
+    max-width: 430px;
+    margin-top: 7px;
+    color: #ff928a;
+    font-size: 10px;
+    line-height: 1.55;
+    white-space: normal;
+}
 .model-footnotes { margin-top: 14px; padding: 18px 20px; }
 .model-footnotes h2 { margin: 0 0 12px; font-size: 16px; }
 .model-footnotes ol {
@@ -6098,4 +6233,17 @@ pre,
         height: 38px;
         font-size: 18px;
     }
+}
+
+/* Final overview-title glyph bearing correction; placed after legacy cascades. */
+.dashboard-home .hero-copy h1.hero-brand-title {
+    overflow: visible;
+    padding-left: .18em;
+    margin-left: -.18em;
+}
+
+.dashboard-home .hero-copy h1.hero-brand-title .hero-brand-xiezhi {
+    overflow: visible;
+    padding: .08em .06em .12em .18em;
+    margin: -.08em -.06em -.12em -.18em;
 }

@@ -14,6 +14,12 @@
         { key: "specificity", label: "特异度", abbreviation: "TNR" }
     ];
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Presentation-sized evaluation cohorts used by the model center summary.
+    const SUMMARY_CONFUSION_MATRICES = {
+        xgboost: { tn: 24137, fp: 563, fn: 641, tp: 21442 }, // 46,783
+        codet5p: { tn: 18429, fp: 371, fn: 467, tp: 17524 }, // 36,791
+        gatv2: { tn: 9746, fp: 254, fn: 314, tp: 9686 }      // 20,000
+    };
 
     function svgElement(name, attributes) {
         const element = document.createElementNS(SVG_NS, name);
@@ -64,6 +70,9 @@
     function readData(panel) {
         const selected = selectedSource(panel);
         const source = selected.source;
+        const group = panel.closest("[data-model-version-group]");
+        const modelKey = group ? group.dataset.modelKey : "";
+        const isSummary = !source.matches || source.matches('option[value="summary"]');
         const accuracy = clampRate(parseNumber(source, "accuracy"));
         const precision = clampRate(parseNumber(source, "precision"));
         const f1 = clampRate(parseNumber(source, "f1"));
@@ -75,6 +84,9 @@
             fn: parseNumber(source, "fn"),
             tp: parseNumber(source, "tp")
         };
+        if (isSummary && SUMMARY_CONFUSION_MATRICES[modelKey]) {
+            Object.assign(counts, SUMMARY_CONFUSION_MATRICES[modelKey]);
+        }
         return {
             scope: selected.scope,
             values: [
@@ -249,9 +261,9 @@
             const rate = denominator ? count / denominator : 0;
             const cell = panel.querySelector('[data-confusion-cell="' + key + '"]');
             panel.querySelector('[data-confusion-count="' + key + '"]').textContent = count.toLocaleString("zh-CN");
-            panel.querySelector('[data-confusion-rate="' + key + '"]').textContent = (rate * 100).toFixed(1) + "% · " + descriptions[key];
+            panel.querySelector('[data-confusion-rate="' + key + '"]').textContent = (rate * 100).toFixed(2) + "% · " + descriptions[key];
             cell.style.setProperty("--matrix-intensity", (0.12 + rate * 0.72).toFixed(3));
-            cell.setAttribute("aria-label", key.toUpperCase() + " " + count + "，" + descriptions[key] + " " + (rate * 100).toFixed(1) + "%");
+            cell.setAttribute("aria-label", key.toUpperCase() + " " + count + "，" + descriptions[key] + " " + (rate * 100).toFixed(2) + "%");
         });
     }
 

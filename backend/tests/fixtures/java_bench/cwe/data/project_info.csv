@@ -1,2 +1,0 @@
-project_slug,cve_id,cwe_id,github_username,github_repository_name,github_url,buggy_commit_id,fix_commit_ids
-acme__app_CVE-2026-1_1,CVE-2026-1,CWE-79,acme,app,https://github.com/acme/app,a,b

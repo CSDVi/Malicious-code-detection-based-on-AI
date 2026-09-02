@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import time
 from collections import Counter
 from pathlib import Path
@@ -16,7 +17,6 @@ from attack_detection.training.artifact_contracts import validate_gat_manifest
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 MODEL_DIR = BACKEND_DIR / "models"
-DEFAULT_DEEP_PYTHON = Path(r"D:\software\anaconda\envs\drone\python.exe")
 PROJECT_INFERENCE_TIMEOUT_SECONDS = max(
     5.0,
     float(os.environ.get(
@@ -24,6 +24,19 @@ PROJECT_INFERENCE_TIMEOUT_SECONDS = max(
         "60",
     )),
 )
+
+
+def configured_deep_python() -> Path:
+    """Return the interpreter used for GATv2 inference.
+
+    Keep an explicit override authoritative and otherwise use the interpreter
+    that launched the application. This matches the CodeT5+ runtime policy.
+    """
+
+    configured = str(os.environ.get("XIEZHI_DEEP_PYTHON") or "").strip()
+    if configured:
+        return Path(configured)
+    return Path(sys.executable)
 
 
 class GATEngine:
@@ -42,7 +55,7 @@ class GATEngine:
     ) -> dict[str, Any]:
         start = time.perf_counter()
         manifest_path = MODEL_DIR / "gatv2_manifest.json"
-        python_path = Path(os.environ.get("XIEZHI_DEEP_PYTHON") or DEFAULT_DEEP_PYTHON)
+        python_path = configured_deep_python()
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
@@ -143,6 +156,14 @@ class GATEngine:
                 "node_count": graph.get("node_count"), "edge_count": graph.get("edge_count"),
                 "route_language": output.get("route_language"),
                 "artifact_version": output.get("artifact_version"),
+                "attribution_method": output.get("attribution_method"),
+                "node_attributions": output.get("node_attributions") or [],
+                "most_suspicious_component": output.get("most_suspicious_component"),
+                "attributed_file_count": output.get("attributed_file_count", 0),
+                "total_file_count": output.get("total_file_count", 0),
+                "attribution_coverage_complete": bool(
+                    output.get("attribution_coverage_complete")
+                ),
             },
         ).to_dict()
 

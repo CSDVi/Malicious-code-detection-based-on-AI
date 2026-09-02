@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "dataset_name": "existing-independent-real-world-project-challenge-cross-file-annotations",
+  "dataset_version": "2026-08-26.1",
+  "description": "Tracked annotation overlay for the existing project-detection challenge corpus; it does not copy, generate, or replace challenge samples.",
+  "independence": {
+    "repository_isolation_verified": true,
+    "family_isolation_verified": true,
+    "data_source_isolation_verified": true,
+    "policy": "existing_project_detection_challenge_set",
+    "note": "Keep these cases outside supplemental GATv2 training and threshold selection."
+  },
+  "cases": [
+    {
+      "id": "android-trojan-rat-calllog-http-exfil",
+      "repository_id": "RAT_AndroidOS.AndroidTrojan-JAVA",
+      "family_id": "android-trojan-rat",
+      "data_source_id": "existing-project-detection-realworld-archive",
+      "archive": "testsets/项目检测/new/RAT_AndroidOS.AndroidTrojan-JAVA.zip",
+      "version": "repository-snapshot",
+      "include_files": [
+        "**/*.java"
+      ],
+      "expected_chain": {
+        "complete": true,
+        "minimum_files": 2,
+        "source_files": [
+          "**/ShellSession.java"
+        ],
+        "transform_files": [
+          "**/ShellSession.java",
+          "**/HttpPoster.java"
+        ],
+        "sink_files": [
+          "**/HttpPoster.java"
+        ]
+      },
+      "expected_top_components": [
+        "**/ShellSession.java"
+      ],
+      "ground_truth": {
+        "annotation_method": "manual_static_review_of_existing_sample",
+        "source_evidence": "ShellSession.java:238 reads SMS content-provider rows",
+        "processing_evidence": "ShellSession.java:247 aggregates rows into res; HttpPoster.java:134 converts data with getBytes",
+        "sink_evidence": "HttpPoster.java:134 writes the propagated data to an HttpURLConnection output stream",
+        "top1_rationale": "ShellSession.java orchestrates collection, command handling, and transfer into the exfiltration component"
+      }
+    }
+  ]
+}

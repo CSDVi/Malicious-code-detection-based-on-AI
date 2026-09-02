@@ -135,6 +135,7 @@ def build_evidence_groups(
 
     groups: list[dict[str, Any]] = []
     group_indexes: dict[tuple[str, str], int] = {}
+    seen_occurrences: dict[tuple[str, str], set[tuple[str, str]]] = {}
     for raw_item in evidence_items or []:
         if not isinstance(raw_item, dict):
             continue
@@ -162,8 +163,31 @@ def build_evidence_groups(
                 "_seen_reference_urls": set(),
                 "_seen_domains": set(),
                 "_seen_examples": set(),
+                "_total_occurrences": 0,
             })
+            seen_occurrences[key] = set()
         group = groups[group_index]
+        group["_total_occurrences"] += 1
+        # Repeated copies of the same statement add noise rather than new
+        # evidence. Keep one representative occurrence per category/CWE.
+        snippet = " ".join(str(item.get("snippet") or "").split()).casefold()
+        rule_id = str(item.get("rule_id") or "").strip().upper()
+        occurrence_key = (rule_id, snippet)
+        if category == "IOC 线索":
+            # URL/domain extractors can report the same network literal using
+            # different IOC rule IDs. Treat it as one clue and keep the report
+            # compact while retaining the total occurrence count.
+            canonical_ioc = snippet.removeprefix("http://").removeprefix("https://").rstrip("/")
+            occurrence_key = ("ioc", canonical_ioc)
+        elif category == "Command Execution":
+            occurrence_key = ("command", snippet)
+        if snippet and occurrence_key in seen_occurrences[key]:
+            continue
+        if snippet:
+            seen_occurrences[key].add(occurrence_key)
+        display_limit = 6 if category == "IOC 线索" else 8 if category == "Command Execution" else None
+        if display_limit is not None and len(group["items"]) >= display_limit:
+            continue
         group["items"].append(item)
 
         harm = _clean_text(item.get("harm") or item.get("description"))
@@ -209,6 +233,9 @@ def build_evidence_groups(
 
     for group in groups:
         group["count"] = len(group["items"])
+        group["total_count"] = group.pop("_total_occurrences", group["count"])
+        group["hidden_count"] = max(0, group["total_count"] - group["count"])
+        group["context_only"] = group.get("category") == "IOC 线索"
         for private_key in (
             "_seen_harms",
             "_seen_suggestions",
@@ -303,6 +330,62 @@ def build_project_report_insights(
             report.get("project_relationship_graph"),
         ),
         "graph_model_status": _project_graph_model_status(report),
+        "cross_file_summary": _project_cross_file_summary(report),
+    }
+
+
+def _project_cross_file_summary(report: dict[str, Any]) -> dict[str, Any] | None:
+    analysis = report.get("project_cross_file_analysis")
+    if not isinstance(analysis, dict):
+        return None
+    call_graph = analysis.get("call_graph")
+    call_graph = call_graph if isinstance(call_graph, dict) else {}
+    component = report.get("most_suspicious_component") or analysis.get(
+        "most_suspicious_component"
+    )
+    component = component if isinstance(component, dict) else None
+    chains = []
+    for raw_chain in analysis.get("complete_chains") or []:
+        if not isinstance(raw_chain, dict):
+            continue
+        steps = []
+        for raw_step in raw_chain.get("trace_steps") or []:
+            if not isinstance(raw_step, dict):
+                continue
+            steps.append({
+                "stage": str(raw_step.get("stage") or ""),
+                "stage_label": str(raw_step.get("stage_label") or raw_step.get("stage") or ""),
+                "file": str(raw_step.get("file") or ""),
+                "function": str(raw_step.get("function") or "<module>"),
+                "line": _integer(raw_step.get("line")),
+                "variable": str(raw_step.get("variable") or ""),
+                "callee": str(raw_step.get("callee") or ""),
+                "snippet": str(raw_step.get("snippet") or ""),
+            })
+        chains.append({
+            "chain_id": str(raw_chain.get("chain_id") or ""),
+            "confidence": _number(raw_chain.get("confidence")),
+            "files": [str(value) for value in raw_chain.get("files") or []],
+            "steps": steps,
+        })
+        if len(chains) >= 12:
+            break
+    resolved_call_count = _integer(call_graph.get("resolved_edge_count")) or 0
+    file_relationship_count = _integer(call_graph.get("file_relationship_count")) or 0
+    complete_chain_count = _integer(analysis.get("complete_chain_count")) or 0
+    # The analyzer emits an empty result object for every standard/deep project.
+    # Suppress the whole panel when there is no cross-file relationship to show.
+    if not chains and not component and resolved_call_count == 0 and file_relationship_count == 0:
+        return None
+    return {
+        "resolved_call_count": resolved_call_count,
+        "file_relationship_count": file_relationship_count,
+        "complete_chain_count": complete_chain_count,
+        "most_suspicious_component": component,
+        "most_suspicious_component_basis": str(
+            analysis.get("most_suspicious_component_basis") or ""
+        ),
+        "chains": chains,
     }
 
 
@@ -802,7 +885,11 @@ def _multi_radar_geometry(
             "style_key": item["style_key"],
             "points": point_string(list(clamped)),
             "dots": [
-                {"x": round(x, 2), "y": round(y, 2)}
+                {
+                    "x": round(x, 2),
+                    "y": round(y, 2),
+                    "percent": round(value * 100, 2),
+                }
                 for index, value in enumerate(clamped)
                 for x, y in (point(index, value),)
             ],

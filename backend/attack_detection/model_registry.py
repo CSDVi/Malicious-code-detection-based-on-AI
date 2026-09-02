@@ -7,14 +7,18 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from time import monotonic
+from typing import Any, Callable
 
 from .codet5p_registry import ARTIFACT_ROOT as CODET5P_ARTIFACT_ROOT
 from .codet5p_registry import registry_view as codet5p_registry_view
+from .engines.codet5p_engine import configured_deep_python
+from .engines.gat_engine import configured_deep_python as configured_gat_python
 from .training.artifact_contracts import (
-    validate_bytetcn_manifest,
     validate_codet5p_manifest,
     validate_gat_manifest,
 )
@@ -31,6 +35,122 @@ MODEL_FILES = (
     "vulnerability_calibrator.joblib",
     "metrics.json",
 )
+
+
+_HEALTH_PROBE_SUCCESS_TTL_SECONDS = 300.0
+_HEALTH_PROBE_FAILURE_TTL_SECONDS = 2.0
+_HEALTH_PROBE_CACHE_LIMIT = 32
+_health_probe_cache: dict[
+    tuple[object, ...],
+    tuple[float, tuple[bool, str]],
+] = {}
+_health_probe_lock = threading.Lock()
+
+
+def _cached_health_probe(
+    key: tuple[object, ...],
+    probe: Callable[[], tuple[bool, str]],
+) -> tuple[bool, str]:
+    """Cache healthy probes longer while allowing transient failures to recover."""
+
+    with _health_probe_lock:
+        now = monotonic()
+        cached = _health_probe_cache.get(key)
+        if cached is not None and cached[0] > now:
+            return cached[1]
+
+        result = probe()
+        ttl = (
+            _HEALTH_PROBE_SUCCESS_TTL_SECONDS
+            if result[0]
+            else _HEALTH_PROBE_FAILURE_TTL_SECONDS
+        )
+        _health_probe_cache[key] = (monotonic() + ttl, result)
+        if len(_health_probe_cache) > _HEALTH_PROBE_CACHE_LIMIT:
+            oldest_key = min(
+                _health_probe_cache,
+                key=lambda item: _health_probe_cache[item][0],
+            )
+            _health_probe_cache.pop(oldest_key, None)
+        return result
+
+
+def _clear_runtime_probe_cache() -> None:
+    """Clear runtime health state after activation or in focused tests."""
+
+    with _health_probe_lock:
+        _health_probe_cache.clear()
+
+
+def _probe_python_modules(
+    python_path_text: str,
+    modules: tuple[str, ...],
+) -> tuple[bool, str]:
+    """Verify that a configured subprocess interpreter can import dependencies."""
+
+    def run_probe() -> tuple[bool, str]:
+        python_path = Path(python_path_text)
+        if not python_path.is_file():
+            return False, f"解释器不可用：{python_path}"
+        script = (
+            "import importlib.util,sys;"
+            f"missing=[name for name in {modules!r} if importlib.util.find_spec(name) is None];"
+            "print(','.join(missing));"
+            "sys.exit(1 if missing else 0)"
+        )
+        try:
+            completed = subprocess.run(
+                [str(python_path), "-c", script],
+                capture_output=True,
+                text=True,
+                timeout=15,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return False, f"解释器依赖检查失败：{exc}"
+        if completed.returncode != 0:
+            missing = (completed.stdout or completed.stderr or "未知依赖").strip()
+            return False, f"缺少推理依赖：{missing}"
+        return True, "推理解释器及依赖可用"
+
+    return _cached_health_probe(
+        ("python_modules", python_path_text, modules),
+        run_probe,
+    )
+
+
+def _probe_xgboost_runtime(
+    model_version: str,
+    artifact_mtime_ns: int,
+) -> tuple[bool, str]:
+    """Load the active XGBoost route and require a real probability."""
+
+    def run_probe() -> tuple[bool, str]:
+        try:
+            from .engines.xgb_engine import XGBoostEngine
+
+            result = next(
+                (
+                    item
+                    for item in XGBoostEngine().scan(
+                        "print('xiezhi runtime health check')",
+                        "python",
+                        generate_line_attributions=False,
+                    )
+                    if item.get("name") == "xgboost_malicious"
+                ),
+                {},
+            )
+        except Exception as exc:  # pragma: no cover - defensive runtime boundary
+            return False, f"最小推理失败：{exc}"
+        if result.get("status") != "completed" or result.get("probability") is None:
+            return False, str(result.get("reason") or "最小推理没有产生概率")
+        return True, "活动语言路由最小推理通过"
+
+    return _cached_health_probe(
+        ("xgboost", model_version, artifact_mtime_ns),
+        run_probe,
+    )
 
 
 def _read_registry() -> dict[str, Any]:
@@ -147,10 +267,20 @@ def runtime_status() -> list[dict[str, Any]]:
         for task in (xgb_manifest.get("tasks") or {}).values()
         if isinstance(task, dict)
     )
-    bytetcn_manifest = _artifact_manifest("bytetcn_manifest.json")
-    bytetcn_ready = bool(bytetcn_manifest) and not validate_bytetcn_manifest(bytetcn_manifest, MODEL_DIR)
+    xgb_artifact = MODEL_DIR / "xgb_malicious_python.joblib"
+    xgb_runtime_ready, xgb_runtime_reason = _probe_xgboost_runtime(
+        str(xgb_manifest.get("model_version") or ""),
+        xgb_artifact.stat().st_mtime_ns if xgb_artifact.is_file() else 0,
+    )
+    xgb_ready = xgb_ready and xgb_runtime_ready
     gat_manifest = _artifact_manifest("gatv2_manifest.json")
-    gat_ready = bool(gat_manifest) and not validate_gat_manifest(gat_manifest, MODEL_DIR)
+    gat_artifact_ready = bool(gat_manifest) and not validate_gat_manifest(gat_manifest, MODEL_DIR)
+    gat_python = configured_gat_python()
+    gat_runtime_ready, gat_runtime_reason = _probe_python_modules(
+        str(gat_python),
+        ("torch", "torch_geometric"),
+    )
+    gat_ready = gat_artifact_ready and gat_runtime_ready
     codet5p_registry = codet5p_registry_view()
     codet5p_active_versions = {
         str(version)
@@ -159,7 +289,7 @@ def runtime_status() -> list[dict[str, Any]]:
         for version in task_routes.values()
         if version
     }
-    codet5p_ready = any(
+    codet5p_artifact_ready = any(
         not validate_codet5p_manifest(
             _read_json_file(CODET5P_ARTIFACT_ROOT / version / "codet5p_manifest.json"),
             CODET5P_ARTIFACT_ROOT / version,
@@ -167,6 +297,18 @@ def runtime_status() -> list[dict[str, Any]]:
         for version in codet5p_active_versions
         if (CODET5P_ARTIFACT_ROOT / version / "codet5p_manifest.json").is_file()
     )
+    codet5p_python = configured_deep_python()
+    codet5p_runtime_ready, codet5p_runtime_reason = _probe_python_modules(
+        str(codet5p_python),
+        ("torch", "safetensors", "transformers"),
+    )
+    codet5p_ready = codet5p_artifact_ready and codet5p_runtime_ready
+    if not codet5p_artifact_ready:
+        codet5p_reason = "基础版本已注册，尚无通过质量门禁的运行时候选"
+    elif not codet5p_runtime_ready:
+        codet5p_reason = codet5p_runtime_reason
+    else:
+        codet5p_reason = "GPU 训练通过质量门禁的语义模型及推理解释器均可用"
     return [
         {
             "name": "TF-IDF / SVM 对照组", "engine": "legacy_svm",
@@ -177,30 +319,29 @@ def runtime_status() -> list[dict[str, Any]]:
             "name": "XGBoost", "engine": "xgboost", "status": "completed" if xgb_ready else "unavailable",
             "version": _artifact_version("xgb_metrics.json"),
             "reason": (
-                "至少一个通过严格门禁的任务/语言路由已加载"
-                if xgb_ready else "没有通过严格门禁的 XGBoost 任务/语言路由"
+                "至少一个通过严格门禁的任务/语言路由已加载，且最小推理通过"
+                if xgb_ready else xgb_runtime_reason
             ),
-        },
-        {
-            "name": "ByteCNN-TCN", "engine": "bytetcn", "status": "completed" if bytetcn_ready else "unavailable",
-            "version": _artifact_version("bytetcn_manifest.json"),
-            "reason": "CPU 推理产物已加载" if bytetcn_ready else "缺少已校准的 ByteCNN-TCN 推理产物",
         },
         {
             "name": "GATv2", "engine": "gatv2", "status": "completed" if gat_ready else "unavailable",
             "version": _artifact_version("gatv2_manifest.json"),
-            "reason": "推理产物已加载" if gat_ready else "缺少 gatv2_classifier.pt",
+            "reason": (
+                "推理产物、解释器及依赖均可用"
+                if gat_ready
+                else (
+                    gat_runtime_reason
+                    if gat_artifact_ready
+                    else "缺少或无法验证 GATv2 推理产物"
+                )
+            ),
         },
         {
             "name": "CodeT5+ 220M",
             "engine": "codet5p",
             "status": "completed" if codet5p_ready else "unavailable",
             "version": ", ".join(sorted(codet5p_active_versions)) or None,
-            "reason": (
-                "GPU 训练通过质量门禁的语义模型已注册"
-                if codet5p_ready
-                else "基础版本已注册，尚无通过质量门禁的运行时候选"
-            ),
+            "reason": codet5p_reason,
         },
     ]
 

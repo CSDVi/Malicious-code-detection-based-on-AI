@@ -9,8 +9,8 @@
         <article class="evidence-item evidence-group motion-card">
             <header class="evidence-group-head">
                 <div>
-                    <strong>{{ group.category|zh }}</strong>
-                    <span>{% if group.cwe %}{{ group.cwe }} · {% endif %}共 {{ group.count }} 处</span>
+                    <strong>{{ group.category|zh }}{% if group.context_only %}（待核验，不代表恶意）{% endif %}</strong>
+                    <span>{% if group.cwe %}{{ group.cwe }} · {% endif %}展示 {{ group.count }} 处{% if group.hidden_count %} · 已合并 {{ group.hidden_count }} 条重复/同类线索{% endif %}</span>
                 </div>
                 {% if group.owasp_category or group.api_security_category %}
                 <small>{% if group.owasp_category %}{{ group.owasp_category }}{% endif %}{% if group.owasp_category and group.api_security_category %} · {% endif %}{% if group.api_security_category %}{{ group.api_security_category }}{% endif %}</small>
@@ -19,13 +19,15 @@
 
             <div class="evidence-occurrence-list">
                 {% for evidence in group["items"] %}
-                <section class="evidence-occurrence" id="evidence-{{ group_number }}-{{ loop.index }}">
+                {% set suspicion_score = evidence.suspicion_score if evidence.suspicion_score is defined and evidence.suspicion_score is not none else none %}
+                {% if suspicion_score is none %}{% set suspicion_level = 'unrated' %}{% elif suspicion_score >= 85 %}{% set suspicion_level = 'critical' %}{% elif suspicion_score >= 65 %}{% set suspicion_level = 'high' %}{% elif suspicion_score >= 35 %}{% set suspicion_level = 'medium' %}{% elif suspicion_score > 0 %}{% set suspicion_level = 'low' %}{% else %}{% set suspicion_level = 'safe' %}{% endif %}
+                <section class="evidence-occurrence suspicion-level-{{ suspicion_level }}" id="evidence-{{ group_number }}-{{ loop.index }}">
                     <header class="evidence-head evidence-occurrence-head">
                         <div>
                             <strong>{% if evidence.line %}第 {{ evidence.line }} 行{% else %}文件级解释{% endif %}</strong>
                             {% if evidence.rule_id %}<span>{{ evidence.rule_id }}</span>{% endif %}
                         </div>
-                        <span class="suspicion-badge">可疑度 {% if evidence.suspicion_score is defined and evidence.suspicion_score is not none %}{{ evidence.suspicion_score }}/100{% else %}未评分{% endif %}</span>
+                        <span class="suspicion-badge"{% if evidence.suspicion_basis %} title="{{ evidence.suspicion_basis }}"{% endif %}>可疑度 {% if suspicion_score is not none %}{{ suspicion_score }}/100{% else %}未评分{% endif %}</span>
                     </header>
                     {% if evidence.code_context %}
                     <pre class="evidence-code">{% for row in evidence.code_context %}<span class="{% if row.is_target %}target-line{% endif %}"><b>{{ row.line }}</b><code>{{ row.code }}</code></span>{% endfor %}</pre>

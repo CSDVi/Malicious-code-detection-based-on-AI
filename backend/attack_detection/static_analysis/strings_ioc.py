@@ -19,6 +19,11 @@ WEBHOOK_RE = re.compile(r"(?:discord(?:app)?\.com/api/webhooks|hooks\.slack\.com
 PATH_RE = re.compile(r"(?:/etc/passwd|/etc/shadow|[A-Z]:\\Users\\[^\s\"']+|%APPDATA%|%TEMP%|/proc/self|\.ssh/(?:id_rsa|authorized_keys))", re.IGNORECASE)
 BASE64_RE = re.compile(r"(?<![A-Za-z0-9+/])(?:[A-Za-z0-9+/]{16,}={0,2})(?![A-Za-z0-9+/])")
 HEX_RE = re.compile(r"(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}){8,}(?![0-9A-Fa-f])")
+COMMON_DOMAIN_SUFFIXES = {
+    "com", "net", "org", "io", "co", "cn", "uk", "de", "fr", "ru",
+    "pl", "jp", "kr", "dev", "app", "info", "biz", "xyz", "online",
+    "site", "me", "tv", "cc", "top", "cloud", "tech", "ai",
+}
 
 
 def printable_strings(data: bytes | str, minimum: int = 4, limit: int = 4000) -> list[tuple[int | None, str]]:
@@ -150,6 +155,7 @@ def classify_iocs(text: str, raw: bytes | None = None) -> list[dict[str, object]
     findings: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
     newline_offsets = _newline_offsets(text)
+    url_spans = [match.span() for match in URL_RE.finditer(text)]
     sources: Iterable[tuple[str, re.Pattern[str], str]] = (
         ("url", URL_RE, "URL"),
         ("webhook", WEBHOOK_RE, "Webhook"),
@@ -169,6 +175,15 @@ def classify_iocs(text: str, raw: bytes | None = None) -> list[dict[str, object]
         )
         for match_start, match_value in matches:
             value = match_value.rstrip(".,;)")
+            if kind == "domain":
+                # Attribute access such as os.path, Crypto.Cipher and AES.new
+                # is Python syntax, not a network indicator. URL-contained
+                # domains are already represented by the URL finding.
+                host = value.split("/", 1)[0].split(":", 1)[0]
+                suffix = host.rsplit(".", 1)[-1].lower() if "." in host else ""
+                inside_url = any(start <= match_start < end for start, end in url_spans)
+                if suffix not in COMMON_DOMAIN_SUFFIXES or inside_url:
+                    continue
             key = (kind, value.lower())
             if key in seen:
                 continue

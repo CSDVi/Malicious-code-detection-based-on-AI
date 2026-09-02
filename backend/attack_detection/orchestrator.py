@@ -35,6 +35,7 @@ ATTACK_BY_CATEGORY = {
     "Command Execution": {"id": "T1059", "name": "Command and Scripting Interpreter"},
     "Download or Remote Load": {"id": "T1105", "name": "Ingress Tool Transfer"},
     "Download and Execute": {"id": "T1105", "name": "Ingress Tool Transfer"},
+    "Ransomware Behavior Chain": {"id": "T1486", "name": "Data Encrypted for Impact"},
     "Obfuscated Payload": {"id": "T1027", "name": "Obfuscated Files or Information"},
     "Credential Collection": {"id": "T1555", "name": "Credentials from Password Stores"},
     "Credential Exfiltration": {"id": "T1041", "name": "Exfiltration Over C2 Channel"},
@@ -435,15 +436,14 @@ class DetectionOrchestrator:
             matches,
             ai_only_evidence,
         )
-        bytetcn = next((engine for engine in engines if engine.get("name") == "bytetcn"), {})
         codet5p = next((engine for engine in engines if engine.get("name") == "codet5p"), {})
-        semantic_engine = codet5p if codet5p.get("status") == "completed" else bytetcn
+        semantic_engine = codet5p
         model_behaviors = [
-            str(item.get("label")) for item in bytetcn.get("metadata", {}).get("behavior_labels", [])
+            str(item.get("label")) for item in semantic_engine.get("metadata", {}).get("behavior_labels", [])
             if item.get("label")
         ]
         model_cwes = [
-            str(item.get("label")) for item in bytetcn.get("metadata", {}).get("cwe_labels", [])
+            str(item.get("label")) for item in semantic_engine.get("metadata", {}).get("cwe_labels", [])
             if item.get("label")
         ]
         categories = sorted({str(match["category"]) for match in matches} | set(model_behaviors))
@@ -565,7 +565,6 @@ class DetectionOrchestrator:
                 str(engine.get("metadata", {}).get("task") or engine.get("name")): engine
                 for engine in engines if str(engine.get("name", "")).startswith("xgboost_")
             },
-            "bytetcn": next((engine for engine in engines if engine.get("name") == "bytetcn"), {"status": "skipped", "probability": None}),
             "codet5p": next((engine for engine in engines if engine.get("name") == "codet5p"), {"status": "skipped", "probability": None}),
             "gatv2": next((engine for engine in engines if engine.get("name") == "gatv2"), {"status": "skipped", "probability": None}),
             "static_evidence": next((engine for engine in engines if engine.get("name") == "static_evidence"), {"status": "skipped"}),

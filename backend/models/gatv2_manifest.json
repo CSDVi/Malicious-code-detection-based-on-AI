@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "model_version": "gatv2-routed-20260801T161900Z-f69839a4659a",
+  "model_version": "gatv2-routed-20260825T105656Z-ba74a13326a0",
   "task": "malicious_intent",
   "positive_label": "malicious",
   "negative_labels": [
@@ -8,7 +8,7 @@
   ],
   "negative_label_scope": "benign",
   "architecture": "Language-routed torch_geometric.nn.GATv2Conv classifiers",
-  "dataset_sha256": "f69839a4659a335599fe0d2e67638820bc7a21c832ca9401f5f21f99e5dc7a87",
+  "dataset_sha256": "ba74a13326a0a32ba1ccadbcbb396dd0b8b7ec75e2ccec6cbb265831348d7c53",
   "node_types": [
     "package",
     "file",
@@ -128,8 +128,8 @@
     "java": {
       "splits": {
         "train": {
-          "positive": 37,
-          "negative": 233
+          "positive": 55,
+          "negative": 251
         },
         "validation": {
           "positive": 14,
@@ -353,7 +353,7 @@
     "cpp": 0.64,
     "csharp": 0.14,
     "html": 0.7,
-    "java": 0.45,
+    "java": 0.42,
     "javascript": 0.62,
     "php": 0.88,
     "powershell": 0.45,
@@ -426,6 +426,17 @@
       "roc_auc": 0.9861111111111112,
       "threshold": 0.46,
       "samples": 48
+    },
+    "java": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.0,
+      "roc_auc": 1.0,
+      "threshold": 0.42,
+      "samples": 62
     }
   },
   "test_metrics_by_language": {
@@ -459,7 +470,7 @@
       "false_positive_rate": 0.0,
       "false_negative_rate": 0.0,
       "roc_auc": 1.0,
-      "threshold": 0.45,
+      "threshold": 0.42,
       "samples": 62
     },
     "php": {
@@ -652,12 +663,13 @@
     "gatv2_classifier__gatv2-20260801T152053Z-6452271f2a3f.pt",
     "gatv2_classifier__gatv2-20260801T152121Z-7ac6bee3b6c9.pt",
     "gatv2_classifier__gatv2-20260801T152425Z-a6a2bc3b718e.pt",
-    "gatv2_classifier__gatv2-20260801T152629Z-8004a7f33873.pt"
+    "gatv2_classifier__gatv2-20260801T152629Z-8004a7f33873.pt",
+    "gatv2_classifier__gatv2-20260825T105317Z-81e69681c664.pt"
   ],
   "runtime_ready": true,
   "runtime_note": "Project inference selects a strict-gated language-specific artifact, feature schema, pooling strategy, calibration temperature, and threshold.",
   "limited_smoke_run": false,
-  "created_at": "2026-08-01T16:19:00+00:00",
+  "created_at": "2026-08-25T10:56:56+00:00",
   "training_datasets": [
     {
       "model_version": "gatv2-20260720T155231Z-fe99241b7585",
@@ -722,6 +734,10 @@
     {
       "model_version": "gatv2-20260801T152629Z-8004a7f33873",
       "dataset_sha256": "8004a7f338737a158b40127b65039efe9f707fe507e4bfdafa328b368f05fb25"
+    },
+    {
+      "model_version": "gatv2-20260825T105317Z-81e69681c664",
+      "dataset_sha256": "81e69681c664671c0e8c4d492f9f5621f381c6f171a1d06bb36732a342e1409e"
     }
   ],
   "language_models": {
@@ -790,7 +806,7 @@
       "model_version": "gatv2-20260722T182932Z-418d164d1c96"
     },
     "java": {
-      "file": "gatv2_classifier__gatv2-20260725T155541Z-ef8f2436f25a.pt",
+      "file": "gatv2_classifier__gatv2-20260825T105317Z-81e69681c664.pt",
       "languages": [
         "python",
         "javascript",
@@ -801,6 +817,8 @@
         "bash",
         "config",
         "go",
+        "powershell",
+        "batch",
         "c",
         "cpp",
         "csharp",
@@ -815,17 +833,19 @@
       ],
       "training": {
         "device": "cpu",
-        "epochs_completed": 16,
-        "seed": 20260725,
+        "epochs_completed": 11,
+        "seed": 202608252,
         "batch_size": 16,
-        "learning_rate": 0.001,
+        "learning_rate": 0.0008,
         "hidden": 64,
         "heads": 4,
-        "dropout": 0.2
+        "dropout": 0.15,
+        "pooling": "mean_max",
+        "feature_schema_version": 9
       },
-      "temperature": 0.6584417223930359,
-      "threshold": 0.45,
-      "model_version": "gatv2-20260725T155541Z-ef8f2436f25a"
+      "temperature": 0.645841121673584,
+      "threshold": 0.42,
+      "model_version": "gatv2-20260825T105317Z-81e69681c664"
     },
     "php": {
       "file": "gatv2_classifier__gatv2-20260725T160709Z-22a992dbe80f.pt",
@@ -1203,6 +1223,5 @@
       "threshold": 0.46,
       "model_version": "gatv2-20260801T152629Z-8004a7f33873"
     }
-  },
-  "promotion_archive": "D:\\Z_TEMP_photo\\AI\\code\\backend\\models\\archive\\gatv2-routed-20260728T074054Z-643305593750-20260801T161900Z"
+  }
 }

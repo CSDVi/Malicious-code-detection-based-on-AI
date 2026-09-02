@@ -13,6 +13,7 @@ from .dataset import CodeSample, is_training_eligible, load_dataset
 from .features.text_features import TRANSFORM_NAME, enrich_model_text
 from .model_registry import create_version_dir, make_version_id, register_version
 from .training.language_coverage import eligible_task_languages
+from .training.sklearn_compat import calibrate_prefit
 
 
 MODEL_TASKS = {
@@ -65,11 +66,7 @@ def _candidate(name: str):
 
 
 def _calibrate(model, x_validation, y_validation):
-    from sklearn.calibration import CalibratedClassifierCV
-
-    calibrated = CalibratedClassifierCV(model, method="sigmoid", cv="prefit")
-    calibrated.fit(x_validation, y_validation)
-    return calibrated
+    return calibrate_prefit(model, x_validation, y_validation)
 
 
 def _probabilities(model, features, positive: str) -> list[float]:

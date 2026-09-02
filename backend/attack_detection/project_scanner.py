@@ -18,6 +18,7 @@ from typing import BinaryIO, Callable
 from uuid import uuid4
 
 from .data_pipeline import make_sample
+from .cross_file_analysis import analyze_cross_file_project
 from .engines.codet5p_engine import CodeT5PEngine
 from .engines.gat_engine import GATEngine
 from .engines.rule_engine import RuleEngine
@@ -27,7 +28,12 @@ from .features.graph_builder import (
     build_project_relationship_graph,
 )
 from .fusion import fuse_engine_results
-from .languages import display_language
+from .languages import (
+    decode_source_payload,
+    display_language,
+    is_generic_text_path,
+    is_probably_text_payload,
+)
 from .scanner import (
     detect_language,
     is_allowed_file,
@@ -595,6 +601,7 @@ def scan_zip_project(
     semantic_indices: list[int] = []
     project_engines: list[dict[str, object]] = []
     project_relationship_graph: dict[str, object] | None = None
+    project_cross_file_analysis: dict[str, object] | None = None
     try:
         try:
             archive_path = stage_project_archive(source) if staged_here else Path(source)
@@ -1102,6 +1109,20 @@ def scan_zip_project(
                 f"每个文件最多分析 {PROJECT_ANALYSIS_MAX_BYTES // 1024} KiB，"
                 "完整原始字节仍用于文件哈希。"
             )
+        if mode in {"standard", "deep", "auto"} and records:
+            _progress(progress_callback, 0, 1, "解析跨文件调用与数据流")
+            try:
+                project_cross_file_analysis = analyze_cross_file_project(records)
+                _attach_cross_file_findings(
+                    results,
+                    project_cross_file_analysis,
+                )
+            except Exception as exc:
+                _warn(
+                    warnings,
+                    f"跨文件调用与数据流分析失败，本次AI模型结果不受影响：{exc}",
+                )
+            _progress(progress_callback, 1, 1, "解析跨文件调用与数据流")
         project_engines = aggregate_project_xgboost(results)
         if graph_result is not None:
             project_engines.append(graph_result)
@@ -1121,6 +1142,11 @@ def scan_zip_project(
                 GATEngine().scan_project(graph, cancel_event=cancel_event)
             )
             _progress(progress_callback, 1, 1, "构建项目图并执行 GATv2")
+        if project_cross_file_analysis is not None:
+            _merge_gat_component_attribution(
+                project_cross_file_analysis,
+                project_engines,
+            )
     finally:
         shutil.rmtree(temporary_root, ignore_errors=True)
         if staged_here and archive_path is not None:
@@ -1131,6 +1157,7 @@ def scan_zip_project(
             warnings,
             project_engines,
             project_relationship_graph,
+            project_cross_file_analysis,
         )
     summary["scan_strategy"] = "all_files_quick_then_batched_candidate_deep"
     summary["deep_scanned_file_count"] = len(deep_indices)
@@ -1211,6 +1238,7 @@ def summarize_project(
     warnings: list[str] | None = None,
     project_engines: list[dict[str, object]] | None = None,
     project_relationship_graph: dict[str, object] | None = None,
+    project_cross_file_analysis: dict[str, object] | None = None,
 ) -> dict[str, object]:
     category_counts: Counter[str] = Counter()
     level_counts: Counter[str] = Counter()
@@ -1314,6 +1342,18 @@ def summarize_project(
         "warnings": list(warnings or []),
         "project_engines": project_engines,
         "project_relationship_graph": project_relationship_graph,
+        "project_cross_file_analysis": project_cross_file_analysis,
+        "project_findings": list(
+            (project_cross_file_analysis or {}).get("findings") or []
+        ),
+        "project_call_graph": (
+            (project_cross_file_analysis or {}).get("call_graph")
+        ),
+        "most_suspicious_component": (
+            (project_cross_file_analysis or {}).get(
+                "most_suspicious_component"
+            )
+        ),
     }
 
 
@@ -1483,6 +1523,13 @@ def _safe_extract(
             dest.unlink(missing_ok=True)
             _warn(warnings, f"已跳过超出大小限制的文件：{member.filename}")
             continue
+        if is_generic_text_path(name):
+            with dest.open("rb") as stream:
+                text_probe = stream.read(64 * 1024)
+            if not is_probably_text_payload(text_probe):
+                dest.unlink(missing_ok=True)
+                _warn(warnings, f"已跳过非文本的 TXT/无后缀文件：{member.filename}")
+                continue
         extracted_files += 1
         extracted_size += dest.stat().st_size
         if extracted_path_names is not None:
@@ -1589,6 +1636,100 @@ def _warn(warnings: list[str], message: str) -> None:
         warnings.append(message)
 
 
+def _attach_cross_file_findings(
+    results: list[dict[str, object]],
+    analysis: dict[str, object],
+) -> None:
+    """Attach project evidence to its sink file without changing AI authority."""
+
+    by_path = {
+        str(item.get("filename") or "").replace("\\", "/").casefold(): item
+        for item in results
+        if isinstance(item, dict) and item.get("filename")
+    }
+    for raw in analysis.get("findings") or []:
+        if not isinstance(raw, dict):
+            continue
+        finding = dict(raw)
+        path = str(finding.get("file") or "").replace("\\", "/")
+        result = by_path.get(path.casefold())
+        if result is None:
+            continue
+        result.setdefault("cross_file_findings", []).append(finding)
+        result.setdefault("findings", []).append(finding)
+        result.setdefault("evidence_items", []).append(finding)
+        category = str(finding.get("category") or "").strip()
+        if category:
+            categories = result.setdefault("categories", [])
+            if category not in categories:
+                categories.append(category)
+            counts = result.setdefault("category_counts", {})
+            counts[category] = int(counts.get(category) or 0) + 1
+        type_counts = result.setdefault("risk_type_counts", {})
+        risk_type = str(finding.get("risk_type") or "context")
+        type_counts[risk_type] = int(type_counts.get(risk_type) or 0) + 1
+        domains = result.setdefault("risk_domains", [])
+        if "跨文件数据流" not in domains:
+            domains.append("跨文件数据流")
+        result["project_evidence_note"] = (
+            "跨文件证据用于解释项目级结论；不会单独覆盖AI最终判定或风险分。"
+        )
+
+
+def _merge_gat_component_attribution(
+    analysis: dict[str, object],
+    project_engines: list[dict[str, object]],
+) -> None:
+    gat = next(
+        (
+            item for item in project_engines
+            if isinstance(item, dict)
+            and item.get("name") == "gatv2"
+            and item.get("status") == "completed"
+        ),
+        None,
+    )
+    static_component = analysis.get("most_suspicious_component")
+    if gat is None:
+        analysis["component_attribution"] = {
+            "gatv2": None,
+            "cross_file_static": static_component,
+        }
+        analysis["most_suspicious_component_basis"] = (
+            "cross_file_chain_stage_weighting"
+            if static_component else None
+        )
+        return
+    metadata = gat.get("metadata") or {}
+    gat_component = metadata.get("most_suspicious_component")
+    analysis["component_attribution"] = {
+        "gatv2": {
+            "method": metadata.get("attribution_method"),
+            "most_suspicious_component": gat_component,
+            "node_attributions": metadata.get("node_attributions") or [],
+            "attributed_file_count": metadata.get("attributed_file_count", 0),
+            "total_file_count": metadata.get("total_file_count", 0),
+            "coverage_complete": bool(
+                metadata.get("attribution_coverage_complete")
+            ),
+            "model_probability": gat.get("probability"),
+            "model_threshold": gat.get("threshold"),
+            "model_decision": gat.get("decision"),
+        },
+        "cross_file_static": static_component,
+    }
+    if isinstance(gat_component, dict):
+        analysis["most_suspicious_component"] = dict(gat_component)
+        analysis["most_suspicious_component_basis"] = (
+            "gatv2_leave_one_file_component_out"
+        )
+    else:
+        analysis["most_suspicious_component_basis"] = (
+            "cross_file_chain_stage_weighting"
+            if static_component else None
+        )
+
+
 def _build_project_relationship_view(
     graph_samples: list[object],
     results: list[dict[str, object]],
@@ -1613,13 +1754,13 @@ def _build_project_relationship_view(
 
 def _bounded_source_content(payload: bytes, maximum_bytes: int) -> str:
     if len(payload) <= maximum_bytes:
-        return payload.decode("utf-8", errors="ignore")
+        return decode_source_payload(payload)
     marker = b"\n/* ... project quick-scan middle omitted ... */\n"
     remaining = max(2, maximum_bytes - len(marker))
     head_size = remaining // 2
     tail_size = remaining - head_size
     sampled = payload[:head_size] + marker + payload[-tail_size:]
-    return sampled.decode("utf-8", errors="ignore")
+    return decode_source_payload(sampled)
 
 
 def _select_deep_candidates(

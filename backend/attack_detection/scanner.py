@@ -7,8 +7,11 @@ from typing import Callable
 from .languages import (
     BINARY_EXTENSIONS,
     SOURCE_EXTENSIONS,
+    decode_source_payload,
     detect_source_language,
     display_language,
+    is_generic_text_path,
+    is_probably_text_payload,
 )
 from .orchestrator import DetectionOrchestrator
 
@@ -21,10 +24,15 @@ def detect_language(filename: str, content: str | None = None) -> str:
     return detect_source_language(filename, content)
 
 
-def is_allowed_file(filename: str) -> bool:
+def is_allowed_file(filename: str, payload: bytes | None = None) -> bool:
     from pathlib import PurePath
 
-    return PurePath(filename.lower()).suffix in ALLOWED_EXTENSIONS
+    suffix = PurePath(filename.lower()).suffix
+    if suffix not in ALLOWED_EXTENSIONS and not is_generic_text_path(filename):
+        return False
+    if payload is not None and is_generic_text_path(filename):
+        return is_probably_text_payload(payload)
+    return True
 
 
 def scan_code(
@@ -66,7 +74,7 @@ def scan_file(
             + payload[-(remaining - head_size):]
         )
         analysis_truncated = True
-    content = analysis_payload.decode("utf-8", errors="ignore")
+    content = decode_source_payload(analysis_payload)
     language = detect_language(filename, content)
     if language == "binary" or payload[:2] == b"MZ":
         result = _orchestrator.scan_binary(

@@ -532,3 +532,4 @@ def _imports_and_dependencies(code: str, language: str) -> list[str]:
             pass
 
     return sorted({value for value in output if value})
+

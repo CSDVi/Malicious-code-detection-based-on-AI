@@ -39,6 +39,7 @@ from attack_detection.languages import (
     BINARY_EXTENSIONS,
     EXTENSION_LANGUAGE,
     display_language,
+    is_generic_text_path,
     language_from_path,
 )
 from attack_detection.model_center import (
@@ -48,6 +49,7 @@ from attack_detection.model_center import (
     model_center_view,
     single_file_supported_languages,
 )
+from attack_detection.model_immunity import run_training_poisoning_gate
 from attack_detection.model_registry import activate_version, runtime_status
 from attack_detection.project_scanner import ArchiveTooLargeError, scan_zip_project, stage_project_archive
 from attack_detection.report import render_record_markdown
@@ -58,7 +60,7 @@ from attack_detection.report_insights import (
     build_project_report_insights,
 )
 from attack_detection.risk_taxonomy import taxonomy_for_category
-from attack_detection.scanner import scan_file
+from attack_detection.scanner import is_allowed_file, scan_file
 from attack_detection.task_policy import is_active_finding
 from attack_detection.training_jobs import training_jobs
 from attack_detection.trainer import train_model
@@ -109,6 +111,7 @@ def _single_file_upload_contract() -> dict[str, object]:
         if language in languages
         and (language != "config" or extension in {".yml", ".yaml"})
     }
+    source_extensions.add(".txt")
     extensions = source_extensions | set(BINARY_EXTENSIONS)
     labels = [
         LANGUAGE_LABELS.get(language, language.upper())
@@ -118,7 +121,9 @@ def _single_file_upload_contract() -> dict[str, object]:
         "languages": languages,
         "labels": labels,
         "extensions": extensions,
-        "accept": ",".join(sorted(extensions)),
+        # An accept allowlist prevents browsers from selecting extensionless
+        # files. Backend validation remains authoritative for every upload.
+        "accept": "",
     }
 
 
@@ -437,7 +442,11 @@ def index():
             flash("请选择需要检测的代码文件。")
             return redirect(url_for("attack.index", tab="file"))
 
-        if Path(filename).suffix.lower() not in upload_contract["extensions"]:
+        suffix = Path(filename).suffix.lower()
+        if is_generic_text_path(filename) and not is_allowed_file(filename, payload):
+            flash("TXT 或无后缀文件必须是可读取的文本，不能包含二进制内容。")
+            return redirect(url_for("attack.index", tab="file"))
+        if not is_generic_text_path(filename) and suffix not in upload_contract["extensions"]:
             flash("不支持该文件类型，请使用检测中心列出的源码、YAML 或 EXE/DLL/SYS/OCX 格式。")
             return redirect(url_for("attack.index", tab="file"))
         job = scan_jobs.submit(
@@ -1182,12 +1191,16 @@ def train_models():
             training_task=training_task,
             target_language=target_language,
             trainer=trainer,
+            preflight=partial(
+                run_training_poisoning_gate,
+                model_family=selected_model["family"],
+            ),
             on_complete=family["reload"],
         )
         flash(
             f"训练任务 {job.id[:12]} 已提交：{selected_model['family_label']} / "
             f"{selected_model['version']}，训练集为 {dataset_name}；"
-            "训练语言将从数据内容中自动识别。"
+            "任务将先执行投毒检测，通过后才开始模型训练。"
         )
     except RuntimeError as exc:
         dataset_path.unlink(missing_ok=True)

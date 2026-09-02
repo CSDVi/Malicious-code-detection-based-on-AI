@@ -83,6 +83,76 @@ def _rva_to_offset(rva: int, sections: list[dict[str, int]]) -> int | None:
     return None
 
 
+def _parse_import_table(
+    data: bytes,
+    optional_offset: int,
+    optional_size: int,
+    magic: int,
+    sections: list[dict[str, int]],
+) -> list[dict[str, Any]]:
+    """Parse a bounded PE import table without loading the executable."""
+
+    data_directory_offset = optional_offset + (112 if magic == 0x20B else 96)
+    number_offset = data_directory_offset - 4
+    optional_end = optional_offset + optional_size
+    if number_offset + 4 > optional_end or data_directory_offset + 16 > optional_end:
+        return []
+    directory_count = struct.unpack_from("<I", data, number_offset)[0]
+    if directory_count < 2:
+        return []
+    import_rva, import_size = struct.unpack_from("<II", data, data_directory_offset + 8)
+    if not import_rva:
+        return []
+    descriptor_offset = _rva_to_offset(import_rva, sections)
+    if descriptor_offset is None:
+        return []
+
+    imports: list[dict[str, Any]] = []
+    thunk_size = 8 if magic == 0x20B else 4
+    thunk_format = "<Q" if thunk_size == 8 else "<I"
+    ordinal_mask = 1 << (63 if thunk_size == 8 else 31)
+    maximum_descriptors = min(256, max(1, import_size // 20) if import_size else 256)
+    total_functions = 0
+    for descriptor_index in range(maximum_descriptors):
+        offset = descriptor_offset + descriptor_index * 20
+        if offset + 20 > len(data):
+            break
+        original_thunk, timestamp, forwarder, name_rva, first_thunk = struct.unpack_from(
+            "<IIIII", data, offset
+        )
+        if not any((original_thunk, timestamp, forwarder, name_rva, first_thunk)):
+            break
+        name_offset = _rva_to_offset(name_rva, sections)
+        library = _read_c_string(data, name_offset if name_offset is not None else -1, 260)
+        if not library:
+            library = f"unknown_{descriptor_index}"
+        thunk_rva = original_thunk or first_thunk
+        thunk_offset = _rva_to_offset(thunk_rva, sections)
+        functions: list[str] = []
+        if thunk_offset is not None:
+            for thunk_index in range(2048):
+                value_offset = thunk_offset + thunk_index * thunk_size
+                if value_offset + thunk_size > len(data) or total_functions >= 4096:
+                    break
+                value = struct.unpack_from(thunk_format, data, value_offset)[0]
+                if not value:
+                    break
+                if value & ordinal_mask:
+                    functions.append(f"ordinal:{value & 0xFFFF}")
+                else:
+                    import_name_offset = _rva_to_offset(int(value), sections)
+                    if import_name_offset is None or import_name_offset + 2 > len(data):
+                        continue
+                    function_name = _read_c_string(data, import_name_offset + 2, 260)
+                    if function_name:
+                        functions.append(function_name)
+                total_functions += 1
+        imports.append({"dll": library, "functions": functions})
+        if total_functions >= 4096:
+            break
+    return imports
+
+
 def parse_pe(data: bytes) -> dict[str, Any]:
     result: dict[str, Any] = {"is_pe": False, "sections": [], "imports": [], "warnings": []}
     if len(data) < 64 or data[:2] != b"MZ":
@@ -114,13 +184,29 @@ def parse_pe(data: bytes) -> dict[str, Any]:
         item = {"name": name, "virtual_size": virtual_size, "virtual_address": virtual_address, "raw_size": raw_size, "raw_pointer": raw_pointer, "entropy": _entropy(section_bytes)}
         sections.append(item)
     result["sections"] = sections
+    result["imports"] = _parse_import_table(
+        data,
+        optional_offset,
+        optional_size,
+        magic,
+        sections,
+    )
     result["overlay_bytes"] = max(0, len(data) - max((item["raw_pointer"] + item["raw_size"] for item in sections), default=0))
     suspicious_sections = [item["name"] for item in sections if item["entropy"] >= 7.2]
     result["high_entropy_sections"] = suspicious_sections
     strings = [value for _, value in printable_strings(data, minimum=5, limit=1200)]
     lowered = "\n".join(strings).lower()
     result["suspicious_strings"] = [value[:240] for value in strings if any(token in value.lower() for token in ("powershell", "cmd.exe", "rundll32", "regsvr32", "appdata", "http://", "https://", "virtualalloc", "createremotethread"))][:80]
-    result["import_indicators"] = sorted({token for token in SUSPICIOUS_IMPORTS if token in lowered})
+    imported_names = {
+        str(function).lower()
+        for library in result["imports"]
+        for function in library.get("functions", [])
+    }
+    result["import_indicators"] = sorted({
+        token
+        for token in SUSPICIOUS_IMPORTS
+        if token in lowered or token in imported_names
+    })
     return result
 
 

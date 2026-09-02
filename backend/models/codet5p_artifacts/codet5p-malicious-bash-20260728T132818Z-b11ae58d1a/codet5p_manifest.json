@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "model_family": "codet5p",
+  "model_version": "codet5p-malicious-bash-20260728T132818Z-b11ae58d1a",
+  "base_version": "codet5p-220m-base",
+  "checkpoint": "Salesforce/codet5p-220m",
+  "task": "malicious_intent",
+  "positive_label": "malicious",
+  "negative_label": "benign",
+  "supported_languages": [
+    "bash"
+  ],
+  "dataset_sha256": "b11ae58d1a786f94c6d5571c7535828a45cd841c21578b1ff57ac49511381cfe",
+  "samples": {
+    "train": 1783,
+    "validation": 231,
+    "test": 160
+  },
+  "label_counts": {
+    "train": {
+      "benign": 723,
+      "malicious": 1060
+    },
+    "validation": {
+      "benign": 25,
+      "malicious": 206
+    },
+    "test": {
+      "benign": 51,
+      "malicious": 109
+    }
+  },
+  "threshold": 0.02,
+  "temperature": 1.616906138060875,
+  "validation_metrics": {
+    "accuracy": 0.9956709956709957,
+    "precision": 0.9951690821256038,
+    "recall": 1.0,
+    "f1": 0.9975786924939467,
+    "false_positive_rate": 0.04,
+    "false_negative_rate": 0.0,
+    "brier_score": 0.010207190528626583,
+    "samples": 231,
+    "positive_samples": 206,
+    "negative_samples": 25,
+    "threshold": 0.02,
+    "confusion_matrix": {
+      "tn": 24,
+      "fp": 1,
+      "fn": 0,
+      "tp": 206
+    }
+  },
+  "test_metrics": {
+    "accuracy": 0.9875,
+    "precision": 0.9819819819819819,
+    "recall": 1.0,
+    "f1": 0.9909090909090909,
+    "false_positive_rate": 0.0392156862745098,
+    "false_negative_rate": 0.0,
+    "brier_score": 0.006149337554572443,
+    "samples": 160,
+    "positive_samples": 109,
+    "negative_samples": 51,
+    "threshold": 0.02,
+    "confusion_matrix": {
+      "tn": 49,
+      "fp": 2,
+      "fn": 0,
+      "tp": 109
+    }
+  },
+  "test_metrics_by_language": {
+    "bash": {
+      "accuracy": 0.9875,
+      "precision": 0.9819819819819819,
+      "recall": 1.0,
+      "f1": 0.9909090909090909,
+      "false_positive_rate": 0.0392156862745098,
+      "false_negative_rate": 0.0,
+      "brier_score": 0.006149337554572443,
+      "samples": 160,
+      "positive_samples": 109,
+      "negative_samples": 51,
+      "threshold": 0.02,
+      "confusion_matrix": {
+        "tn": 49,
+        "fp": 2,
+        "fn": 0,
+        "tp": 109
+      }
+    }
+  },
+  "test_metrics_by_source": {
+    "crossvul": {
+      "accuracy": 0.9375,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "false_positive_rate": 0.0625,
+      "false_negative_rate": 0.0,
+      "brier_score": 0.06101012316052155,
+      "samples": 16,
+      "positive_samples": 0,
+      "negative_samples": 16,
+      "threshold": 0.02,
+      "confusion_matrix": {
+        "tn": 15,
+        "fp": 1,
+        "fn": 0,
+        "tp": 0
+      }
+    },
+    "labeled_bashbench": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.0,
+      "brier_score": 5.4110500995348114e-05,
+      "samples": 108,
+      "positive_samples": 108,
+      "negative_samples": 0,
+      "threshold": 0.02,
+      "confusion_matrix": {
+        "tn": 0,
+        "fp": 0,
+        "fn": 0,
+        "tp": 108
+      }
+    },
+    "pypi_popular_official": {
+      "accuracy": 0.9714285714285714,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "false_positive_rate": 0.02857142857142857,
+      "false_negative_rate": 0.0,
+      "brier_score": 5.006540188292787e-05,
+      "samples": 35,
+      "positive_samples": 0,
+      "negative_samples": 35,
+      "threshold": 0.02,
+      "confusion_matrix": {
+        "tn": 34,
+        "fp": 1,
+        "fn": 0,
+        "tp": 0
+      }
+    },
+    "vx_underground_malware_source": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.0,
+      "brier_score": 0.0001358149898465634,
+      "samples": 1,
+      "positive_samples": 1,
+      "negative_samples": 0,
+      "threshold": 0.02,
+      "confusion_matrix": {
+        "tn": 0,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      }
+    }
+  },
+  "deployment_gate": {
+    "minimum_precision": 0.9,
+    "maximum_false_positive_rate": 0.1,
+    "maximum_false_negative_rate": 0.1
+  },
+  "passed_deployment_gate": true,
+  "runtime_ready": true,
+  "calibrated": true,
+  "calibration_split": "validation",
+  "family_isolation_verified": true,
+  "config": {
+    "max_length": 512,
+    "stride": 128,
+    "maximum_code_characters": 32768,
+    "maximum_train_windows": 3,
+    "maximum_eval_windows": 8,
+    "window_aggregation": "max_logit",
+    "dropout": 0.15
+  },
+  "training": {
+    "device": "cuda",
+    "torch_version": "2.5.1+cu121",
+    "epochs_completed": 5,
+    "batch_size": 4,
+    "learning_rate": 2e-05,
+    "pairwise_weight": 0.2,
+    "pairwise_margin": 1.0,
+    "seed": 20260723,
+    "mixed_precision": true,
+    "resumed_from": null
+  },
+  "files": [
+    "codet5p_classifier.safetensors",
+    "config.json",
+    "merges.txt",
+    "special_tokens_map.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "vocab.json"
+  ],
+  "created_at": "2026-07-28T13:28:18+00:00"
+}

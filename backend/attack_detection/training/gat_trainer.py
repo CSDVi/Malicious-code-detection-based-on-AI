@@ -194,7 +194,10 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
     )
     supported_languages = [
         language for language in eligible_languages
-        if _passes_deployment_gate(test_metrics_by_language[language])
+        if _passes_release_gate(
+            validation_metrics_by_language[language],
+            test_metrics_by_language[language],
+        )
     ]
     test_metrics = _conservative_language_summary(
         test_metrics_by_language, supported_languages,
@@ -655,6 +658,18 @@ def _passes_deployment_gate(metrics: dict[str, float]) -> bool:
         <= DEPLOYMENT_GATE["maximum_false_positive_rate"]
         and float(metrics.get("false_negative_rate", 1.0))
         <= DEPLOYMENT_GATE["maximum_false_negative_rate"]
+    )
+
+
+def _passes_release_gate(
+    validation_metrics: dict[str, float],
+    test_metrics: dict[str, float],
+) -> bool:
+    """Require the deployment gate on both frozen evaluation splits."""
+
+    return (
+        _passes_deployment_gate(validation_metrics)
+        and _passes_deployment_gate(test_metrics)
     )
 
 

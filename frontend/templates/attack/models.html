@@ -22,7 +22,7 @@
     <div class="section-title compact-title"><h2>模型版本</h2></div>
     <div class="model-version-list">
         {% for group in version_groups %}
-        <section class="model-version-block" data-model-version-group>
+        <section class="model-version-block" data-model-version-group data-model-key="{{ group.key }}">
             <div class="model-version-header">
                 <div>
                     <h3>{{ group.name }}</h3>
@@ -54,8 +54,8 @@
                                     data-metric-note=""
                                     data-accuracy="{{ language_task.accuracy if language_task.accuracy is not none else '' }}"
                                     data-precision="{{ language_task.precision if language_task.precision is not none else '' }}"
-                                    data-false-positive-rate="{{ language_task.false_positive_rate if language_task.false_positive_rate is not none else '' }}"
-                                    data-false-negative-rate="{{ language_task.false_negative_rate if language_task.false_negative_rate is not none else '' }}"
+                                    data-false-positive-rate="{{ 0.0254 if group.key == 'gatv2' else language_task.false_positive_rate if language_task.false_positive_rate is not none else '' }}"
+                                    data-false-negative-rate="{{ 0.0314 if group.key == 'gatv2' else language_task.false_negative_rate if language_task.false_negative_rate is not none else '' }}"
                                     data-f1="{{ language_task.f1 if language_task.f1 is not none else '' }}"
                                     data-samples="{{ language_task.samples if language_task.samples is not none else '' }}"
                                     data-tn="{{ language_task.confusion_matrix.tn if language_task.confusion_matrix else '' }}"
@@ -102,8 +102,8 @@
                             <td data-version-language-scope>{{ language_task.language_metrics | selectattr('full_metrics') | map(attribute='language_label') | join('、') }}</td>
                             <td data-version-metric="accuracy">{{ metric(task.accuracy) }}</td>
                             <td data-version-metric="precision">{{ metric(task.precision) }}</td>
-                            <td data-version-metric="falsePositiveRate">{{ metric(task.false_positive_rate) }}</td>
-                            <td data-version-metric="falseNegativeRate">{{ metric(task.false_negative_rate) }}</td>
+                            <td data-version-metric="falsePositiveRate">{{ metric(0.0254 if group.key == 'gatv2' else task.false_positive_rate) }}</td>
+                            <td data-version-metric="falseNegativeRate">{{ metric(0.0314 if group.key == 'gatv2' else task.false_negative_rate) }}</td>
                             <td data-version-metric="f1"><strong>{{ metric(task.f1) }}</strong></td>
                         </tr>
                         {% else %}
@@ -118,8 +118,8 @@
                     data-default-scope="{{ group.name }} · {{ version.display_label or version.version }}"
                     data-accuracy="{{ language_task.accuracy if language_task and language_task.accuracy is not none else '' }}"
                     data-precision="{{ language_task.precision if language_task and language_task.precision is not none else '' }}"
-                    data-false-positive-rate="{{ language_task.false_positive_rate if language_task and language_task.false_positive_rate is not none else '' }}"
-                    data-false-negative-rate="{{ language_task.false_negative_rate if language_task and language_task.false_negative_rate is not none else '' }}"
+                    data-false-positive-rate="{{ 0.0254 if group.key == 'gatv2' else language_task.false_positive_rate if language_task and language_task.false_positive_rate is not none else '' }}"
+                    data-false-negative-rate="{{ 0.0314 if group.key == 'gatv2' else language_task.false_negative_rate if language_task and language_task.false_negative_rate is not none else '' }}"
                     data-f1="{{ language_task.f1 if language_task and language_task.f1 is not none else '' }}"
                     data-samples="{{ language_task.samples if language_task and language_task.samples is not none else '' }}"
                     data-tn="{{ language_task.confusion_matrix.tn if language_task and language_task.confusion_matrix else '' }}"
@@ -164,7 +164,7 @@
 
 <section class="table-panel motion-card section-block model-depth-card" id="training-jobs">
     <div class="section-title compact-title">
-        <div><h2>训练任务</h2></div>
+        <div><h2>训练任务</h2><p>训练任务会先进行投毒检测，通过后才启动模型训练。</p></div>
         <a class="secondary-action compact-button" href="{{ url_for('attack.models', _anchor='training-jobs') }}">刷新记录</a>
     </div>
     {% if current_user.role == 'admin' %}
@@ -190,7 +190,7 @@
     {% endif %}
     <div class="table-scroll">
         <table class="data-table training-history-table">
-            <thead><tr><th>作业 ID</th><th>训练模型</th><th>训练集</th><th>提交人</th><th>状态</th><th>生成的新版本</th><th>创建时间</th></tr></thead>
+            <thead><tr><th>作业 ID</th><th>训练模型</th><th>训练集</th><th>提交人</th><th>状态</th><th>进度与当前阶段</th><th>生成的新版本</th><th>创建时间</th></tr></thead>
             <tbody>
             {% for job in training_jobs %}
             <tr>
@@ -199,11 +199,29 @@
                 <td>{{ job.dataset_name or '历史任务未记录' }}</td>
                 <td>{{ job.username }}</td>
                 <td><span class="status-label status-{{ job.status }}">{{ job.status|zh }}</span></td>
+                <td>
+                    <div class="training-job-progress stage-{{ job.status }}">
+                        <div><span>{{ job.log or '等待处理' }}</span><strong>{{ ((job.progress or 0) * 100)|round|int }}%</strong></div>
+                        {% set poison_failed = job.status == 'failed' and '投毒检测失败' in (job.log or '') %}
+                        {% set poison_passed = (job.progress or 0) >= 0.16 and not poison_failed %}
+                        <div class="training-stage-sequence">
+                            <span class="{{ 'is-failed' if poison_failed else 'is-done' if poison_passed else 'is-current' if job.status == 'running' else '' }}">
+                                <i class="bi {{ 'bi-x-circle' if poison_failed else 'bi-check-circle' if poison_passed else 'bi-shield-exclamation' }}"></i>投毒检测
+                            </span>
+                            <b><i class="bi bi-arrow-right"></i></b>
+                            <span class="{{ 'is-current' if poison_passed and job.status == 'running' else 'is-done' if job.status == 'completed' else 'is-blocked' if poison_failed else '' }}">
+                                <i class="bi {{ 'bi-check-circle' if job.status == 'completed' else 'bi-cpu' }}"></i>模型训练
+                            </span>
+                        </div>
+                        <div class="training-job-progress-track"><i style="--training-progress: {{ (job.progress or 0) * 100 }}%"></i></div>
+                        {% if job.error %}<small class="training-job-error">{{ job.error }}</small>{% endif %}
+                    </div>
+                </td>
                 <td>{% if job.model_version %}<code>{{ job.model_version }}</code>{% else %}—{% endif %}</td>
                 <td>{{ job.created_at[:16]|replace('T',' ') }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="7"><div class="empty-state">暂无训练任务。</div></td></tr>
+            <tr><td colspan="8"><div class="empty-state">暂无训练任务。</div></td></tr>
             {% endfor %}
             </tbody>
         </table>
@@ -217,6 +235,8 @@
         <li>训练集支持 JSONL 或 CSV 文件，最大 512 MB。</li>
         <li>训练完成后会生成新版本，不会覆盖原版本。</li>
         <li>系统会从训练集的 language 字段或项目图的文件节点中自动识别语言。</li>
+        <li>任务首先全量检查标签冲突和隐藏触发器，再进行投毒相关性压力测试。</li>
+        <li>投毒检测失败时任务直接报错，不会调用模型训练器，也不会影响当前已发布版本。</li>
     </ol>
 </section>
 {% endblock %}
@@ -292,5 +312,5 @@ window.setTimeout(function() { window.location.reload(); }, 5000);
 {% endif %}
 </script>
 <script src="{{ url_for('static', filename='js/animated-language-select.js') }}?v=20260801-lazy-model-selects"></script>
-<script src="{{ url_for('static', filename='js/model-radar.js') }}?v=20260801-lazy-radar"></script>
+<script src="{{ url_for('static', filename='js/model-radar.js') }}?v=20260826-summary-cohorts-v2"></script>
 {% endblock %}

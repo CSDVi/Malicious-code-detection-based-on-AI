@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "model_family": "codet5p",
+  "model_version": "codet5p-malicious-powershell-20260728T152010Z-83d3080f48",
+  "base_version": "codet5p-220m-base",
+  "checkpoint": "Salesforce/codet5p-220m",
+  "task": "malicious_intent",
+  "positive_label": "malicious",
+  "negative_label": "benign",
+  "supported_languages": [
+    "powershell"
+  ],
+  "dataset_sha256": "83d3080f48bc70597549811b5bafeb19d2b2ad0c01aabe03bacfddd7c9cc22b3",
+  "samples": {
+    "train": 1293,
+    "validation": 354,
+    "test": 374
+  },
+  "label_counts": {
+    "train": {
+      "benign": 1072,
+      "malicious": 221
+    },
+    "validation": {
+      "benign": 300,
+      "malicious": 54
+    },
+    "test": {
+      "benign": 321,
+      "malicious": 53
+    }
+  },
+  "threshold": 0.56,
+  "temperature": 1.4505088286975392,
+  "validation_metrics": {
+    "accuracy": 0.980225988700565,
+    "precision": 0.9433962264150944,
+    "recall": 0.9259259259259259,
+    "f1": 0.9345794392523364,
+    "false_positive_rate": 0.01,
+    "false_negative_rate": 0.07407407407407407,
+    "brier_score": 0.02002873984787854,
+    "samples": 354,
+    "positive_samples": 54,
+    "negative_samples": 300,
+    "threshold": 0.56,
+    "confusion_matrix": {
+      "tn": 297,
+      "fp": 3,
+      "fn": 4,
+      "tp": 50
+    }
+  },
+  "test_metrics": {
+    "accuracy": 0.9759358288770054,
+    "precision": 0.9230769230769231,
+    "recall": 0.9056603773584906,
+    "f1": 0.9142857142857143,
+    "false_positive_rate": 0.012461059190031152,
+    "false_negative_rate": 0.09433962264150944,
+    "brier_score": 0.0219908604456341,
+    "samples": 374,
+    "positive_samples": 53,
+    "negative_samples": 321,
+    "threshold": 0.56,
+    "confusion_matrix": {
+      "tn": 317,
+      "fp": 4,
+      "fn": 5,
+      "tp": 48
+    }
+  },
+  "test_metrics_by_language": {
+    "powershell": {
+      "accuracy": 0.9759358288770054,
+      "precision": 0.9230769230769231,
+      "recall": 0.9056603773584906,
+      "f1": 0.9142857142857143,
+      "false_positive_rate": 0.012461059190031152,
+      "false_negative_rate": 0.09433962264150944,
+      "brier_score": 0.0219908604456341,
+      "samples": 374,
+      "positive_samples": 53,
+      "negative_samples": 321,
+      "threshold": 0.56,
+      "confusion_matrix": {
+        "tn": 317,
+        "fp": 4,
+        "fn": 5,
+        "tp": 48
+      }
+    }
+  },
+  "test_metrics_by_source": {
+    "github_powershell_benign_candidates": {
+      "accuracy": 1.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.0,
+      "brier_score": 0.00020829436989458817,
+      "samples": 21,
+      "positive_samples": 0,
+      "negative_samples": 21,
+      "threshold": 0.56,
+      "confusion_matrix": {
+        "tn": 21,
+        "fp": 0,
+        "fn": 0,
+        "tp": 0
+      }
+    },
+    "powershell_malicious_set_1": {
+      "accuracy": 0.9056603773584906,
+      "precision": 1.0,
+      "recall": 0.9056603773584906,
+      "f1": 0.9504950495049505,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.09433962264150944,
+      "brier_score": 0.08505727488971437,
+      "samples": 53,
+      "positive_samples": 53,
+      "negative_samples": 0,
+      "threshold": 0.56,
+      "confusion_matrix": {
+        "tn": 0,
+        "fp": 0,
+        "fn": 5,
+        "tp": 48
+      }
+    },
+    "the_stack_smol_powershell_expansion": {
+      "accuracy": 0.9866666666666667,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "false_positive_rate": 0.013333333333333334,
+      "false_negative_rate": 0.0,
+      "brier_score": 0.012373906852481653,
+      "samples": 300,
+      "positive_samples": 0,
+      "negative_samples": 300,
+      "threshold": 0.56,
+      "confusion_matrix": {
+        "tn": 296,
+        "fp": 4,
+        "fn": 0,
+        "tp": 0
+      }
+    }
+  },
+  "deployment_gate": {
+    "minimum_precision": 0.9,
+    "maximum_false_positive_rate": 0.1,
+    "maximum_false_negative_rate": 0.1
+  },
+  "passed_deployment_gate": true,
+  "runtime_ready": true,
+  "calibrated": true,
+  "calibration_split": "validation",
+  "family_isolation_verified": true,
+  "config": {
+    "max_length": 512,
+    "stride": 128,
+    "maximum_code_characters": 32768,
+    "maximum_train_windows": 5,
+    "maximum_eval_windows": 12,
+    "window_aggregation": "max_logit",
+    "dropout": 0.15
+  },
+  "training": {
+    "device": "cuda",
+    "torch_version": "2.5.1+cu121",
+    "epochs_completed": 7,
+    "batch_size": 4,
+    "learning_rate": 1e-05,
+    "pairwise_weight": 0.4,
+    "pairwise_margin": 1.0,
+    "seed": 20260724,
+    "mixed_precision": true,
+    "resumed_from": null
+  },
+  "files": [
+    "codet5p_classifier.safetensors",
+    "config.json",
+    "merges.txt",
+    "special_tokens_map.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "vocab.json"
+  ],
+  "created_at": "2026-07-28T15:20:10+00:00"
+}

@@ -122,7 +122,10 @@
         zone.addEventListener("drop", (event) => {
             const file = event.dataTransfer && event.dataTransfer.files[0];
             if (!file) return;
-            const accepted = (input.getAttribute("accept") || "").split(",").map((value) => value.trim().toLowerCase());
+            const accepted = (input.getAttribute("accept") || "")
+                .split(",")
+                .map((value) => value.trim().toLowerCase())
+                .filter(Boolean);
             const extension = file.name.includes(".") ? `.${file.name.split(".").pop().toLowerCase()}` : "";
             const label = zone.querySelector("[data-file-label]");
             if (accepted.length && !accepted.includes(extension)) {
